@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pesanrahasia-pwa-v2';
+const CACHE_NAME = 'pesanrahasia-pwa-v3';
 const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/icon-192.png',
@@ -26,14 +26,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first strategy agar pesan rahasia E2EE & data Admin selalu real-time
+// Network-first (no-store) agar halaman utama, Admin, dan API selalu real-time
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
   );
 });
 
@@ -77,7 +77,6 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(payload.title, options),
-      // Kirim pesan juga ke tab Admin yang sedang terbuka agar langsung bunyi & refresh
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
         for (const client of windowClients) {
           client.postMessage({
@@ -110,4 +109,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-

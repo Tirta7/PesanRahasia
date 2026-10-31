@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PesanRahasia Admin — Monitoring Pengguna & Lisensi VOC ML</title>
+  <title>PesanRahasia Admin — Control Center & Lisensi VOC ML</title>
   <meta name="theme-color" content="#10b981" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -19,7 +19,7 @@
     :root {
       --bg-dark: #06090f;
       --bg-card: rgba(15, 20, 30, 0.88);
-      --bg-card-solid: #0f141e;
+      --bg-inner: rgba(8, 12, 20, 0.72);
       --bg-input: #090d14;
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-emerald: rgba(16, 185, 129, 0.35);
@@ -50,7 +50,7 @@
       line-height: 1.5;
     }
 
-    /* Ambient Glows Selaras dengan index.html */
+    /* Ambient Glows Identik dengan index.html */
     .ambient-bg {
       position: fixed;
       inset: 0;
@@ -81,20 +81,21 @@
       display: none !important;
     }
 
+    /* Container Proporsional Selaras Konsep Aplikasi Utama */
     .app-container {
       width: 100%;
-      max-width: 1140px;
+      max-width: 820px;
       margin: 0 auto;
-      padding: 22px 18px 60px;
+      padding: 20px 16px 56px;
     }
 
-    /* Header Selaras dengan Halaman Utama */
+    /* Header Identik index.html */
     .app-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 22px;
+      gap: 12px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
     }
 
@@ -119,7 +120,6 @@
       box-shadow: 0 0 20px var(--primary-glow);
       flex-shrink: 0;
     }
-
     .brand-icon svg {
       width: 22px;
       height: 22px;
@@ -129,14 +129,12 @@
       display: flex;
       flex-direction: column;
     }
-
     .brand-title {
-      font-size: 1.2rem;
+      font-size: 1.18rem;
       font-weight: 800;
       letter-spacing: -0.02em;
       line-height: 1.2;
     }
-
     .brand-badge {
       font-size: 0.72rem;
       color: var(--primary);
@@ -156,10 +154,10 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
+      gap: 6px;
       padding: 9px 14px;
       border-radius: 10px;
-      font-size: 0.81rem;
+      font-size: 0.8rem;
       font-weight: 700;
       font-family: inherit;
       border: 1px solid transparent;
@@ -180,89 +178,87 @@
     }
 
     .btn-outline {
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--text-main);
       border-color: var(--border-subtle);
     }
     .btn-outline:hover {
-      background: rgba(255, 255, 255, 0.09);
-      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .btn-amber {
-      background: rgba(245, 158, 11, 0.14);
+      background: rgba(245, 158, 11, 0.15);
       color: #fcd34d;
-      border-color: rgba(245, 158, 11, 0.35);
+      border-color: rgba(245, 158, 11, 0.38);
     }
     .btn-amber:hover {
-      background: rgba(245, 158, 11, 0.24);
+      background: rgba(245, 158, 11, 0.25);
     }
 
     .btn-danger {
-      background: rgba(239, 68, 68, 0.14);
+      background: rgba(239, 68, 68, 0.15);
       color: #fca5a5;
-      border-color: rgba(239, 68, 68, 0.35);
+      border-color: rgba(239, 68, 68, 0.38);
     }
     .btn-danger:hover {
-      background: rgba(239, 68, 68, 0.24);
+      background: rgba(239, 68, 68, 0.25);
     }
 
-    .btn-xs {
-      padding: 6px 10px;
-      font-size: 0.74rem;
+    .btn-sm {
+      padding: 7px 11px;
+      font-size: 0.75rem;
       border-radius: 8px;
-      gap: 5px;
     }
 
-    /* Card Utama Selaras index.html */
+    /* Card Utama Identik index.html */
     .card {
       background: var(--bg-card);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
-      padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-      margin-bottom: 20px;
+      padding: 22px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.52);
+      margin-bottom: 18px;
     }
 
     /* Login Card */
     .login-card {
       max-width: 440px;
-      margin: 48px auto;
+      margin: 42px auto;
       text-align: center;
-      padding: 32px 26px;
+      padding: 30px 24px;
     }
 
     .login-badge-circle {
-      width: 60px;
-      height: 60px;
+      width: 58px;
+      height: 58px;
       border-radius: 16px;
-      margin: 0 auto 16px;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.08));
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      margin: 0 auto 14px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.42);
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--primary);
-      box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.22);
     }
     .login-badge-circle svg {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
     }
 
     .login-card h1 {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       letter-spacing: -0.02em;
     }
-
     .login-card p {
-      font-size: 0.87rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
 
     .form-input {
@@ -272,7 +268,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
       color: var(--text-main);
-      font-size: 0.94rem;
+      font-size: 0.92rem;
       font-family: inherit;
       margin-bottom: 14px;
       transition: border-color 0.2s, box-shadow 0.2s;
@@ -283,68 +279,71 @@
       box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
     }
 
-    /* Quick Action Bar & Web Push Banner */
-    .quick-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      padding: 14px 18px;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(15, 20, 30, 0.9));
-      border: 1px solid rgba(16, 185, 129, 0.28);
+    /* Banner Web Push & Kontrol Cepat */
+    .push-banner-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 20, 30, 0.92));
+      border: 1px solid rgba(16, 185, 129, 0.32);
       border-radius: 16px;
-      margin-bottom: 18px;
-    }
-
-    .quick-bar-left {
+      padding: 15px 18px;
+      margin-bottom: 16px;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 12px;
     }
 
-    .push-dot-icon {
+    .push-banner-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .push-banner-info {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .push-icon-box {
       width: 38px;
       height: 38px;
       border-radius: 10px;
-      background: rgba(16, 185, 129, 0.16);
-      border: 1px solid rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.38);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       flex-shrink: 0;
     }
 
-    .quick-bar-title {
+    .push-title {
       font-size: 0.88rem;
       font-weight: 700;
       color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
     }
 
-    .quick-bar-sub {
-      font-size: 0.76rem;
+    .push-desc {
+      font-size: 0.75rem;
       color: var(--text-muted);
       margin-top: 2px;
     }
 
-    .quick-bar-actions {
-      display: flex;
-      align-items: center;
+    .push-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      flex-wrap: wrap;
     }
 
-    /* 4 Kartu Statistik Proporsional (4 Kolom Desktop, 2x2 Mobile) */
+    /* 4 Kartu Statistik (2x2 di Mobile, 4 di Desktop) */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
     .stat-card {
@@ -352,87 +351,73 @@
       backdrop-filter: blur(16px);
       border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      padding: 16px 18px;
-      transition: transform 0.18s ease, border-color 0.18s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(16, 185, 129, 0.32);
+      padding: 14px 16px;
     }
 
     .stat-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .stat-label {
-      font-size: 0.76rem;
+      font-size: 0.73rem;
       font-weight: 600;
       color: var(--text-muted);
     }
 
     .stat-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       font-size: 0.95rem;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
     .stat-value {
-      font-size: 1.85rem;
+      font-size: 1.65rem;
       font-weight: 800;
       color: #ffffff;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
+      line-height: 1.15;
     }
 
     .stat-sub {
-      font-size: 0.73rem;
+      font-size: 0.7rem;
       color: #6ee7b7;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
-    /* Segmented Main Tabs (Pengguna vs Riwayat Pesan) */
+    /* Segmented Tabs */
     .main-tabs {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
-      background: rgba(9, 13, 20, 0.8);
+      background: rgba(9, 13, 20, 0.85);
       border: 1px solid var(--border-subtle);
       padding: 6px;
       border-radius: 14px;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .main-tab-btn {
-      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 10px 14px;
+      gap: 6px;
+      padding: 10px 12px;
       border-radius: 10px;
-      border: none;
+      border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
       font-family: inherit;
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.18s ease;
+      text-align: center;
     }
 
     .main-tab-btn.active {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.15));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.14));
       color: #6ee7b7;
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      border-color: rgba(16, 185, 129, 0.42);
     }
 
     /* Section Header & Filter Toolbar */
@@ -441,28 +426,25 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      padding-bottom: 14px;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
       border-bottom: 1px solid var(--border-subtle);
     }
 
     .section-title-group h2 {
-      font-size: 1.08rem;
+      font-size: 1.05rem;
       font-weight: 800;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
-
     .section-title-group p {
-      font-size: 0.79rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
     }
 
-    .toolbar-row {
+    .filter-toolbar {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
       gap: 10px;
       margin-bottom: 16px;
     }
@@ -471,13 +453,14 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      flex-wrap: wrap;
+      overflow-x: auto;
+      padding-bottom: 2px;
     }
 
     .filter-pill {
       padding: 6px 12px;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       font-weight: 600;
       font-family: inherit;
       background: rgba(255, 255, 255, 0.04);
@@ -494,69 +477,61 @@
     }
 
     .search-box {
-      padding: 9px 14px;
+      width: 100%;
+      padding: 10px 14px;
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: 10px;
       color: var(--text-main);
-      font-size: 0.82rem;
+      font-size: 0.83rem;
       font-family: inherit;
-      min-width: 260px;
     }
     .search-box:focus {
       outline: none;
       border-color: var(--primary);
     }
 
-    /* Tabel Desktop & Otomatis Menjadi Card di Mobile (Tanpa Terpotong!) */
-    .table-wrap {
-      width: 100%;
+    /* ========================================================================
+       RESPONSIVE ITEM CARDS (PENGGANTI TABEL KAKU — 100% BEBAS TERPOTONG)
+       ======================================================================== */
+    .cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-card {
+      background: var(--bg-inner);
       border: 1px solid var(--border-subtle);
       border-radius: 14px;
-      background: rgba(6, 9, 15, 0.45);
-      overflow: hidden;
+      padding: 15px 16px;
+      transition: border-color 0.18s ease;
+    }
+    .item-card:hover {
+      border-color: rgba(16, 185, 129, 0.35);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
-
-    th, td {
-      padding: 12px 13px;
-      text-align: left;
+    .item-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      vertical-align: middle;
     }
 
-    th {
-      color: var(--text-muted);
-      font-weight: 700;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      background: rgba(255, 255, 255, 0.025);
-    }
-
-    tbody tr:hover td {
-      background: rgba(16, 185, 129, 0.04);
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* Elemen dalam Sel */
-    .user-cell {
+    .user-identity {
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
     }
 
     .avatar-sm {
-      width: 34px;
-      height: 34px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       object-fit: cover;
       border: 1.5px solid rgba(16, 185, 129, 0.45);
@@ -566,56 +541,118 @@
     .user-name {
       font-weight: 700;
       color: #ffffff;
-      font-size: 0.84rem;
+      font-size: 0.9rem;
       display: block;
+      line-height: 1.25;
     }
 
     .user-email {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.73rem;
+      font-size: 0.74rem;
       color: #6ee7b7;
       display: block;
       word-break: break-all;
     }
 
-    .machine-id-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      padding: 4px 8px;
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.74rem;
+    .item-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .meta-box {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 9px 11px;
+      min-width: 0;
+    }
+
+    .meta-label {
+      font-size: 0.68rem;
       font-weight: 600;
-      color: #fcd34d;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .meta-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #f3f4f6;
+      word-break: break-word;
+    }
+
+    .meta-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
+    .machine-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .machine-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #fcd34d;
+    }
+
     .copy-mini-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #f3f4f6;
-      border-radius: 5px;
-      padding: 2px 6px;
-      font-size: 0.67rem;
-      font-weight: 600;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.38);
+      color: #6ee7b7;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.68rem;
+      font-weight: 700;
       cursor: pointer;
     }
     .copy-mini-btn:hover {
       background: var(--primary);
       color: #04130d;
-      border-color: var(--primary);
     }
 
+    .item-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    .item-time-text {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Badges */
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 3px 9px;
+      padding: 4px 10px;
       border-radius: 999px;
-      font-size: 0.71rem;
+      font-size: 0.72rem;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -640,109 +677,66 @@
       border: 1px solid rgba(156, 163, 175, 0.28);
     }
 
-    .sub-detail {
-      display: block;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
     .mono {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: #d1d5db;
     }
 
-    .ip-chip {
-      display: inline-block;
-      max-width: 135px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: bottom;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      color: #9ca3af;
-      background: rgba(255, 255, 255, 0.04);
-      padding: 1px 6px;
-      border-radius: 5px;
-    }
-
-    .action-group {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-wrap: wrap;
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 32px 16px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border-subtle);
+      border-radius: 12px;
     }
 
     /* Modal Detail Pengguna */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(3, 6, 12, 0.8);
+      background: rgba(3, 6, 12, 0.82);
       backdrop-filter: blur(8px);
       z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 14px;
     }
 
     .modal-card {
       width: 100%;
-      max-width: 720px;
+      max-width: 600px;
       max-height: 90vh;
       overflow-y: auto;
       background: #0f141e;
       border: 1px solid var(--border-emerald);
       border-radius: 20px;
-      padding: 22px;
-      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75);
+      padding: 20px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.78);
     }
 
     .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding-bottom: 14px;
+      gap: 10px;
+      padding-bottom: 12px;
       border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
-    .detail-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 11px 13px;
-    }
-
-    .detail-box-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .detail-box-value {
-      font-size: 0.84rem;
-      font-weight: 600;
-      color: #fff;
-      word-break: break-all;
-    }
-
-    /* Toast Selaras index.html */
+    /* Toast */
     .toast {
       position: fixed;
-      bottom: 22px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       background: #111827;
@@ -750,88 +744,18 @@
       color: #ecfdf5;
       padding: 11px 18px;
       border-radius: 999px;
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       font-weight: 600;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
       z-index: 2000;
-      max-width: calc(100vw - 28px);
+      max-width: calc(100vw - 24px);
       text-align: center;
     }
 
-    /* ============================================================================
-       RESPONSIVE DESIGN: TABLET & MOBILE CARD VIEW (<= 880px)
-       Mengubah baris tabel menjadi Kartu Mobile Native agar tidak ada yang terpotong!
-       ============================================================================ */
-    @media (max-width: 880px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-      }
-
-      .table-wrap {
-        border: none;
-        background: transparent;
-      }
-
-      table, thead, tbody, th, td, tr {
-        display: block;
-        width: 100%;
-      }
-
-      thead tr {
-        display: none;
-      }
-
-      tbody tr {
-        background: rgba(9, 13, 20, 0.75);
-        border: 1px solid var(--border-subtle);
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 12px;
-      }
-
-      tbody tr td {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        text-align: right;
-      }
-
-      tbody tr td:first-child {
-        padding-top: 0;
-      }
-
-      tbody tr td:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-        padding-top: 10px;
-      }
-
-      tbody tr td::before {
-        content: attr(data-label);
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: var(--text-muted);
-        text-align: left;
-        flex-shrink: 0;
-      }
-
-      .user-cell {
-        text-align: left;
-      }
-
-      .action-group {
-        width: 100%;
-        justify-content: flex-end;
-      }
-    }
-
-    @media (max-width: 640px) {
+    /* ========================================================================
+       RESPONSIVE BREAKPOINTS (TABLET & MOBILE HP)
+       ======================================================================== */
+    @media (max-width: 680px) {
       .app-container {
         padding: 14px 12px 44px;
       }
@@ -851,24 +775,15 @@
 
       .header-right .btn {
         width: 100%;
-        padding: 9px 10px;
-        font-size: 0.76rem;
       }
 
-      .quick-bar {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 14px;
-      }
-
-      .quick-bar-actions {
-        display: grid;
+      .push-actions-grid {
         grid-template-columns: repeat(2, 1fr);
-        width: 100%;
       }
 
-      .quick-bar-actions .btn {
-        width: 100%;
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
       }
 
       .card {
@@ -876,29 +791,21 @@
         border-radius: 16px;
       }
 
-      .main-tabs {
-        flex-direction: row;
+      .item-meta-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
       }
 
-      .main-tab-btn {
-        font-size: 0.78rem;
-        padding: 9px 8px;
-      }
-
-      .toolbar-row {
+      .item-card-footer {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
       }
 
-      .filter-pills {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 4px;
-      }
-
-      .search-box {
+      .item-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
         width: 100%;
-        min-width: 0;
       }
 
       .detail-grid {
@@ -931,16 +838,16 @@
       </a>
 
       <div class="header-right">
-        <button type="button" id="admin-pwa-install-btn" class="btn btn-primary hidden">
-          📲 Install PWA Admin
+        <button type="button" id="admin-pwa-install-btn" class="btn btn-primary btn-sm hidden">
+          📲 Install PWA
         </button>
-        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" id="vocml-link-btn" class="btn btn-amber hidden">
+        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" id="vocml-link-btn" class="btn btn-amber btn-sm hidden">
           🔑 Panel VOC ML ↗
         </a>
-        <a href="/" class="btn btn-outline">
+        <a href="/" class="btn btn-outline btn-sm">
           ← Ke Aplikasi
         </a>
-        <button id="admin-logout-btn" class="btn btn-danger hidden">
+        <button id="admin-logout-btn" class="btn btn-danger btn-sm hidden">
           Keluar
         </button>
       </div>
@@ -968,33 +875,33 @@
 
     <!-- Konten Utama Dashboard Admin -->
     <main id="admin-dashboard-section" class="hidden">
-      <!-- Bar Web Push Notification & Sinkronisasi Cepat -->
-      <div class="quick-bar">
-        <div class="quick-bar-left">
-          <div class="push-dot-icon">🔔</div>
-          <div>
-            <div class="quick-bar-title">
-              <span>Notifikasi Pendaftar Baru (Web Push HP)</span>
-              <span id="push-sub-badge" class="badge badge-pending">⏳ Belum Aktif</span>
-            </div>
-            <div class="quick-bar-sub" id="push-banner-desc">
-              Terima notifikasi otomatis di HP Anda setiap ada pendaftar Gmail baru atau kuota Trial 10x habis.
+      <!-- Bar Web Push Notification & Kontrol Cepat -->
+      <div class="push-banner-card">
+        <div class="push-banner-top">
+          <div class="push-banner-info">
+            <div class="push-icon-box">🔔</div>
+            <div>
+              <div class="push-title">Notifikasi Pendaftar Baru (Web Push HP)</div>
+              <div class="push-desc" id="push-banner-desc">
+                Handphone Anda berbunyi otomatis saat ada pendaftar baru atau kuota Trial 10x habis.
+              </div>
             </div>
           </div>
+          <span id="push-sub-badge" class="badge badge-pending">⏳ Belum Aktif</span>
         </div>
 
-        <div class="quick-bar-actions">
-          <button type="button" id="banner-enable-push-btn" class="btn btn-primary btn-xs">
-            🔔 Aktifkan Notifikasi HP
+        <div class="push-actions-grid">
+          <button type="button" id="banner-enable-push-btn" class="btn btn-primary btn-sm">
+            🔔 Aktifkan Push HP
           </button>
-          <button type="button" id="banner-test-push-btn" class="btn btn-outline btn-xs">
+          <button type="button" id="banner-test-push-btn" class="btn btn-outline btn-sm">
             📨 Tes Push HP
           </button>
-          <button type="button" id="sync-all-btn" class="btn btn-amber btn-xs">
+          <button type="button" id="sync-all-btn" class="btn btn-amber btn-sm">
             🔄 Sinkron VOC ML
           </button>
-          <button type="button" id="refresh-btn" class="btn btn-outline btn-xs">
-            ⚡ Refresh
+          <button type="button" id="refresh-btn" class="btn btn-outline btn-sm">
+            ⚡ Refresh Data
           </button>
         </div>
       </div>
@@ -1003,25 +910,25 @@
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-top">
-            <span class="stat-label">Total Pengguna Gmail</span>
+            <span class="stat-label">Pengguna Gmail</span>
             <span class="stat-icon">👥</span>
           </div>
           <div class="stat-value" id="stat-total-users">0</div>
-          <div class="stat-sub" id="stat-active-sub">0 aktif 24 jam terakhir</div>
+          <div class="stat-sub" id="stat-active-sub">0 aktif hari ini</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-top">
-            <span class="stat-label">Lisensi VOC ML Aktif</span>
+            <span class="stat-label">Lisensi Pro</span>
             <span class="stat-icon">🔑</span>
           </div>
           <div class="stat-value" id="stat-licensed-users">0</div>
-          <div class="stat-sub" id="stat-unlicensed-sub">0 mode Trial / menunggu</div>
+          <div class="stat-sub" id="stat-unlicensed-sub">0 mode Trial</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-top">
-            <span class="stat-label">Total Link Pesan Dibuat</span>
+            <span class="stat-label">Pesan Dibuat</span>
             <span class="stat-icon">📨</span>
           </div>
           <div class="stat-value" id="stat-total-messages">0</div>
@@ -1030,37 +937,37 @@
 
         <div class="stat-card">
           <div class="stat-top">
-            <span class="stat-label">Pesan Dibuka & Hancur</span>
+            <span class="stat-label">Dibuka & Hancur</span>
             <span class="stat-icon">🔥</span>
           </div>
           <div class="stat-value" id="stat-destroyed-messages">0</div>
-          <div class="stat-sub" id="stat-expired-sub">0 kedaluwarsa otomatis</div>
+          <div class="stat-sub" id="stat-expired-sub">0 kedaluwarsa</div>
         </div>
       </div>
 
-      <!-- Tab Switcher agar Tampilan Bersih & Fokus seperti Aplikasi Utama -->
+      <!-- Segmented Tab Switcher -->
       <div class="main-tabs">
         <button type="button" class="main-tab-btn active" id="tab-btn-users">
-          👥 Daftar Pengguna & Lisensi (<span id="tab-count-users">0</span>)
+          👥 Pengguna & Lisensi (<span id="tab-count-users">0</span>)
         </button>
         <button type="button" class="main-tab-btn" id="tab-btn-logs">
-          🕵️ Riwayat Aktivitas Pesan (<span id="tab-count-logs">0</span>)
+          🕵️ Riwayat Link Pesan (<span id="tab-count-logs">0</span>)
         </button>
       </div>
 
-      <!-- PANEL TAB 1: DAFTAR PENGGUNA GMAIL & LISENSI -->
+      <!-- PANEL TAB 1: DAFTAR PENGGUNA GMAIL (RESPONSIVE CARDS) -->
       <section id="panel-users" class="card">
         <div class="section-header">
           <div class="section-title-group">
-            <h2>📋 Pengguna Gmail, Trial 10x & Lisensi VOC ML</h2>
-            <p>Pendaftar baru otomatis mendapat <strong>Trial 10x Pesan Gratis</strong> sebelum terkunci & wajib aktivasi di <strong>vocml.vocpos.id</strong>.</p>
+            <h2>📋 Daftar Pengguna Gmail & Lisensi Akun</h2>
+            <p>Setiap akun baru mendapat <strong>Trial 10x Pesan Gratis</strong> sebelum wajib aktivasi di <strong>vocml.vocpos.id</strong>.</p>
           </div>
-          <button id="export-csv-btn" class="btn btn-primary btn-xs">
-            📥 Export CSV Pengguna
+          <button id="export-csv-btn" class="btn btn-primary btn-sm">
+            📥 Export CSV
           </button>
         </div>
 
-        <div class="toolbar-row">
+        <div class="filter-toolbar">
           <div class="filter-pills" id="user-filter-pills">
             <button type="button" class="filter-pill active" data-filter="all">Semua Pengguna</button>
             <button type="button" class="filter-pill" data-filter="active">✅ Lisensi Pro</button>
@@ -1068,41 +975,27 @@
             <button type="button" class="filter-pill" data-filter="expired">🛑 Trial Habis / Terkunci</button>
           </div>
 
-          <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, ID Lisensi, atau IP..." />
+          <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, ID Lisensi VOC ML, atau IP..." />
         </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Pengguna & Gmail</th>
-                <th>ID Lisensi (VOC ML)</th>
-                <th>Status & Kuota Trial</th>
-                <th>Pesan & Perangkat</th>
-                <th>Waktu Aktif</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="users-table-body">
-              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat data pengguna...</td></tr>
-            </tbody>
-          </table>
+        <div id="users-cards-list" class="cards-list">
+          <div class="empty-state">Memuat data pengguna...</div>
         </div>
       </section>
 
-      <!-- PANEL TAB 2: RIWAYAT AKTIVITAS LINK PESAN -->
+      <!-- PANEL TAB 2: RIWAYAT AKTIVITAS LINK PESAN (RESPONSIVE CARDS) -->
       <section id="panel-logs" class="card hidden">
         <div class="section-header">
           <div class="section-title-group">
             <h2>🕵️ Riwayat Aktivitas Link Pesan Rahasia</h2>
-            <p>Audit pengirim link, mode proteksi, status penghancuran pesan, dan perangkat pembuka.</p>
+            <p>Audit siapa yang membuat link rahasia, kapan dibuka, serta perangkat pembuka.</p>
           </div>
-          <button id="export-logs-csv-btn" class="btn btn-outline btn-xs">
-            📥 Export CSV Riwayat
+          <button id="export-logs-csv-btn" class="btn btn-outline btn-sm">
+            📥 Export CSV
           </button>
         </div>
 
-        <div class="toolbar-row">
+        <div class="filter-toolbar">
           <div class="filter-pills" id="log-filter-pills">
             <button type="button" class="filter-pill active" data-filter="all">Semua Status</button>
             <button type="button" class="filter-pill" data-filter="pending">⏳ Menunggu Dibuka</button>
@@ -1113,22 +1006,8 @@
           <input type="text" id="log-search" class="search-box" placeholder="🔍 Cari ID Link, email pengirim, atau IP pembuka..." />
         </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID Link</th>
-                <th>Pengirim (Gmail)</th>
-                <th>Proteksi & Timer</th>
-                <th>Status Pesan</th>
-                <th>Waktu Dibuat & Dibuka</th>
-                <th>Pembuka & Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="logs-table-body">
-              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat riwayat aktivitas...</td></tr>
-            </tbody>
-          </table>
+        <div id="logs-cards-list" class="cards-list">
+          <div class="empty-state">Memuat riwayat aktivitas...</div>
         </div>
       </section>
     </main>
@@ -1138,69 +1017,54 @@
   <div id="user-detail-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img id="modal-user-avatar" src="" class="avatar-sm" style="width:44px; height:44px;" alt="" />
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img id="modal-user-avatar" src="" class="avatar-sm" style="width:42px; height:42px;" alt="" />
           <div>
-            <h3 id="modal-user-name" style="font-size:1.05rem; font-weight:800;">-</h3>
+            <h3 id="modal-user-name" style="font-size:1rem; font-weight:800;">-</h3>
             <span id="modal-user-email" class="user-email">-</span>
           </div>
         </div>
-        <button id="close-modal-btn" class="btn btn-outline btn-xs">✕ Tutup</button>
+        <button id="close-modal-btn" class="btn btn-outline btn-sm">✕ Tutup</button>
       </div>
 
       <div class="detail-grid">
-        <div class="detail-box">
-          <div class="detail-box-label">ID Lisensi Akun (VOC ML Machine ID)</div>
-          <div class="detail-box-value" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <span id="modal-user-machine" style="font-family:'JetBrains Mono',monospace; color:#fcd34d;">-</span>
+        <div class="meta-box">
+          <div class="meta-label">ID Lisensi Akun (VOC ML)</div>
+          <div class="machine-row" style="margin-top:4px;">
+            <span id="modal-user-machine" class="machine-code">-</span>
             <button type="button" id="modal-copy-machine" class="copy-mini-btn">Salin ID</button>
           </div>
         </div>
 
-        <div class="detail-box">
-          <div class="detail-box-label">Status & Kuota Trial / Lisensi</div>
-          <div class="detail-box-value" id="modal-user-license">-</div>
+        <div class="meta-box">
+          <div class="meta-label">Status & Kuota</div>
+          <div id="modal-user-license" style="margin-top:4px;">-</div>
         </div>
 
-        <div class="detail-box">
-          <div class="detail-box-label">IP Address Terakhir</div>
-          <div class="detail-box-value mono" id="modal-user-ip">-</div>
+        <div class="meta-box">
+          <div class="meta-label">IP Address Terakhir</div>
+          <div class="meta-value mono" style="font-size:0.75rem;" id="modal-user-ip">-</div>
         </div>
 
-        <div class="detail-box">
-          <div class="detail-box-label">Total Link Pesan Dibuat</div>
-          <div class="detail-box-value" id="modal-user-msg-count">0 pesan</div>
+        <div class="meta-box">
+          <div class="meta-label">Total Link Pesan Dibuat</div>
+          <div class="meta-value" id="modal-user-msg-count">0 pesan</div>
         </div>
 
-        <div class="detail-box" style="grid-column: 1 / -1;">
-          <div class="detail-box-label">Detail Browser & Perangkat (User-Agent)</div>
-          <div class="detail-box-value mono" style="font-size:0.74rem; color:var(--text-muted);" id="modal-user-ua">-</div>
+        <div class="meta-box" style="grid-column: 1 / -1;">
+          <div class="meta-label">Detail Browser & Perangkat (User-Agent)</div>
+          <div class="meta-value mono" style="font-size:0.72rem; color:var(--text-muted);" id="modal-user-ua">-</div>
         </div>
       </div>
 
-      <div style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <h4 style="font-size:0.88rem; font-weight:700;">📨 Riwayat Link Pesan dari Pengguna Ini</h4>
-        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" class="btn btn-amber btn-xs">
-          🔑 Kelola Lisensi di VOC ML ↗
+      <div style="margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <h4 style="font-size:0.86rem; font-weight:700;">📨 Riwayat Link Pesan Pengguna Ini</h4>
+        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" class="btn btn-amber btn-sm">
+          🔑 Kelola di VOC ML ↗
         </a>
       </div>
 
-      <div class="table-wrap" style="max-height:240px; overflow-y:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>ID Link</th>
-              <th>Mode</th>
-              <th>Status</th>
-              <th>Dibuat</th>
-              <th>Dibuka</th>
-            </tr>
-          </thead>
-          <tbody id="modal-user-logs-body">
-            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada pesan.</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <div id="modal-user-logs-list" class="cards-list" style="max-height:240px; overflow-y:auto;"></div>
     </div>
   </div>
 
@@ -1247,8 +1111,8 @@
       const statDestroyedMessages = document.getElementById('stat-destroyed-messages');
       const statExpiredSub = document.getElementById('stat-expired-sub');
 
-      const usersTableBody = document.getElementById('users-table-body');
-      const logsTableBody = document.getElementById('logs-table-body');
+      const usersCardsList = document.getElementById('users-cards-list');
+      const logsCardsList = document.getElementById('logs-cards-list');
 
       const userDetailModal = document.getElementById('user-detail-modal');
       const closeModalBtn = document.getElementById('close-modal-btn');
@@ -1278,7 +1142,6 @@
         else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
       }
 
-      // Tab Switching
       tabBtnUsers.addEventListener('click', () => {
         tabBtnUsers.classList.add('active');
         tabBtnLogs.classList.remove('active');
@@ -1340,12 +1203,12 @@
 
           if (existingSub && Notification.permission === 'granted') {
             pushSubBadge.className = 'badge badge-active';
-            pushSubBadge.textContent = `✓ Aktif (${subscriberCount || 1} HP/Perangkat)`;
+            pushSubBadge.textContent = `✓ Aktif (${subscriberCount || 1} HP)`;
             bannerEnablePushBtn.textContent = '🔄 Perbarui Push';
-            pushBannerDesc.textContent = 'Web Push aktif! Handphone Anda akan langsung berbunyi saat ada pendaftar Gmail baru.';
+            pushBannerDesc.textContent = 'Web Push aktif! Handphone Anda akan langsung berbunyi saat ada pendaftar baru.';
           } else {
             pushSubBadge.className = 'badge badge-pending';
-            pushSubBadge.textContent = `⏳ Belum Aktif (${subscriberCount || 0} Terdaftar)`;
+            pushSubBadge.textContent = `⏳ Belum Aktif (${subscriberCount || 0} HP)`;
           }
         } catch {
           // Abaikan
@@ -1414,7 +1277,7 @@
             playNotificationChime();
             showToast(`📨 Notifikasi tes terkirim ke ${data.sent} perangkat Admin!`);
           } else {
-            showToast('⚠️ Klik "Aktifkan Notifikasi HP" terlebih dahulu.');
+            showToast('⚠️ Klik "Aktifkan Push HP" terlebih dahulu.');
           }
         } catch {
           showToast('⚠️ Gagal mengirim tes notifikasi.');
@@ -1430,12 +1293,12 @@
       }
 
       function formatExpiryInfo(expiresAt) {
-        if (!expiresAt) return 'Unlimited / Aktif';
+        if (!expiresAt) return 'Lisensi Pro Unlimited';
         const exp = new Date(expiresAt);
         if (isNaN(exp.getTime())) return String(expiresAt);
         const diffDays = Math.ceil((exp.getTime() - Date.now()) / 86400000);
         const dateStr = exp.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-        if (diffDays > 0) return `s/d ${dateStr} (${diffDays} hr)`;
+        if (diffDays > 0) return `Aktif s/d ${dateStr} (${diffDays} hr)`;
         return `Habis ${dateStr}`;
       }
 
@@ -1457,52 +1320,42 @@
         return br ? `${os} · ${br}` : os;
       }
 
-      function licenseBadgeHtml(u) {
+      function getLicenseStatusObj(u) {
         const st = u.licenseStatus || 'pending';
         const used = Number(u.messagesCreated) || 0;
         const rem = Math.max(0, 10 - used);
 
         if (st === 'active' || st === 'expiring') {
-          return `
-            <div>
-              <span class="badge badge-active">✅ Lisensi Pro</span>
-              <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
-            </div>
-          `;
+          return {
+            badge: '<span class="badge badge-active">✅ Lisensi Pro</span>',
+            sub: formatExpiryInfo(u.licenseExpiresAt)
+          };
         }
         if (st === 'expired') {
-          return `
-            <div>
-              <span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>
-              <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
-            </div>
-          `;
+          return {
+            badge: '<span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>',
+            sub: formatExpiryInfo(u.licenseExpiresAt)
+          };
         }
         if (st === 'locked') {
-          return `
-            <div>
-              <span class="badge badge-destroyed">🔒 Dikunci VOC ML</span>
-              <span class="sub-detail">Dibuka dari VOC ML</span>
-            </div>
-          `;
+          return {
+            badge: '<span class="badge badge-destroyed">🔒 Dikunci VOC ML</span>',
+            sub: 'Perlu dibuka di VOC ML'
+          };
         }
         if (used >= 10 || st === 'trial_exhausted') {
-          return `
-            <div>
-              <span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>
-              <span class="sub-detail">Wajib aktivasi berbayar</span>
-            </div>
-          `;
+          return {
+            badge: '<span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>',
+            sub: 'Wajib aktivasi berbayar'
+          };
         }
-        return `
-          <div>
-            <span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>
-            <span class="sub-detail">Sisa ${rem} pesan gratis</span>
-          </div>
-        `;
+        return {
+          badge: `<span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>`,
+          sub: `Sisa ${rem} pesan gratis`
+        };
       }
 
-      function renderUsersTable() {
+      function renderUsersList() {
         const q = userSearchInput.value.trim().toLowerCase();
         const filtered = allUsers.filter((u) => {
           const st = u.licenseStatus || 'pending';
@@ -1521,69 +1374,77 @@
         });
 
         if (filtered.length === 0) {
-          usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Tidak ada data pengguna Gmail yang sesuai filter.</td></tr>';
+          usersCardsList.innerHTML = '<div class="empty-state">Tidak ada data pengguna Gmail yang sesuai filter.</div>';
           return;
         }
 
-        usersTableBody.innerHTML = filtered
+        usersCardsList.innerHTML = filtered
           .map((u) => {
             const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
             const userLogs = allLogs.filter((l) => l.senderEmail === u.email);
             const destroyedCount = userLogs.filter((l) => l.status === 'destroyed').length;
             const machineId = u.machineId || '-';
+            const licInfo = getLicenseStatusObj(u);
 
             return `
-              <tr>
-                <td data-label="Pengguna & Gmail">
-                  <div class="user-cell">
+              <div class="item-card">
+                <div class="item-card-top">
+                  <div class="user-identity">
                     <img src="${avatar}" class="avatar-sm" alt="" />
                     <div>
                       <span class="user-name">${u.name || '-'}</span>
                       <span class="user-email">${u.email}</span>
                     </div>
                   </div>
-                </td>
-                <td data-label="ID Lisensi VOC ML">
-                  <div class="machine-id-pill">
-                    <span>${machineId}</span>
-                    <button type="button" class="copy-mini-btn js-copy-machine" data-machine="${machineId}">Salin</button>
+                  ${licInfo.badge}
+                </div>
+
+                <div class="item-meta-grid">
+                  <div class="meta-box">
+                    <div class="meta-label">ID Lisensi (VOC ML)</div>
+                    <div class="machine-row">
+                      <span class="machine-code">${machineId}</span>
+                      <button type="button" class="copy-mini-btn js-copy-machine" data-machine="${machineId}">Salin</button>
+                    </div>
+                    <div class="meta-sub">${licInfo.sub}</div>
                   </div>
-                </td>
-                <td data-label="Status & Kuota">
-                  ${licenseBadgeHtml(u)}
-                </td>
-                <td data-label="Pesan & Perangkat">
-                  <div>
-                    <strong>${u.messagesCreated || 0}</strong> pesan <span style="color:var(--text-muted);">(${destroyedCount} dibuka)</span>
-                    <span class="sub-detail">${shortUA(u.userAgent)} • <span class="ip-chip" title="${u.lastIp || '-'}">${u.lastIp || '-'}</span></span>
+
+                  <div class="meta-box">
+                    <div class="meta-label">Aktivitas Pesan</div>
+                    <div class="meta-value">${u.messagesCreated || 0} Pesan Dibuat</div>
+                    <div class="meta-sub">🔥 ${destroyedCount} pesan sudah dibuka</div>
                   </div>
-                </td>
-                <td data-label="Waktu Aktif">
-                  <div>
-                    <div style="font-size:0.77rem;">${formatDate(u.lastLoginAt)}</div>
-                    <span class="sub-detail">Daftar: ${formatDate(u.createdAt)}</span>
+
+                  <div class="meta-box">
+                    <div class="meta-label">Perangkat & IP</div>
+                    <div class="meta-value">${shortUA(u.userAgent)}</div>
+                    <div class="meta-sub mono" title="${u.lastIp || '-'}">${u.lastIp || '-'}</div>
                   </div>
-                </td>
-                <td data-label="Aksi">
-                  <div class="action-group">
-                    <button type="button" class="btn btn-outline btn-xs js-user-detail" data-email="${u.email}">
+                </div>
+
+                <div class="item-card-footer">
+                  <div class="item-time-text">
+                    🕒 Terakhir aktif: <strong>${formatDate(u.lastLoginAt)}</strong> • Daftar: ${formatDate(u.createdAt)}
+                  </div>
+                  <div class="item-actions">
+                    <button type="button" class="btn btn-outline btn-sm js-user-detail" data-email="${u.email}">
                       🔍 Detail
                     </button>
-                    <button type="button" class="btn btn-amber btn-xs js-sync-user" data-email="${u.email}" title="Sinkronkan lisensi ke VOC ML">
-                      🔄 Cek
+                    <button type="button" class="btn btn-amber btn-sm js-sync-user" data-email="${u.email}">
+                      🔄 Cek VOC ML
                     </button>
-                    <button type="button" class="btn btn-danger btn-xs js-delete-user" data-id="${u.id}" data-email="${u.email}" title="Hapus pengguna">
+                    <button type="button" class="btn btn-danger btn-sm js-delete-user" data-id="${u.id}" data-email="${u.email}" title="Hapus pengguna">
                       🗑️
                     </button>
                   </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             `;
           })
           .join('');
       }
 
-      function renderLogsTable() {
+      function renderLogsList() {
         const q = logSearchInput.value.trim().toLowerCase();
         const filtered = allLogs.filter((l) => {
           if (activeLogFilter !== 'all' && l.status !== activeLogFilter) return false;
@@ -1597,11 +1458,11 @@
         });
 
         if (filtered.length === 0) {
-          logsTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Belum ada riwayat aktivitas link pesan yang sesuai filter.</td></tr>';
+          logsCardsList.innerHTML = '<div class="empty-state">Belum ada riwayat aktivitas link pesan yang sesuai filter.</div>';
           return;
         }
 
-        logsTableBody.innerHTML = filtered
+        logsCardsList.innerHTML = filtered
           .map((l) => {
             let badgeHtml = '<span class="badge badge-pending">⏳ Menunggu Dibuka</span>';
             if (l.status === 'destroyed') {
@@ -1610,49 +1471,50 @@
               badgeHtml = '<span class="badge badge-expired">⌛ Kedaluwarsa</span>';
             }
 
-            const modeLabel = l.protectionMode === 'hold' ? '👆 Tahan Tombol' : '🔦 Spotlight';
+            const modeLabel = l.protectionMode === 'hold' ? '👆 Tahan Tombol (Hold)' : '🔦 Spotlight Anti-Screenshot';
 
             return `
-              <tr>
-                <td data-label="ID Link">
-                  <span class="mono" style="color:#6ee7b7; font-weight:700;">#${l.id}</span>
-                </td>
-                <td data-label="Pengirim (Gmail)">
+              <div class="item-card">
+                <div class="item-card-top">
                   <div>
-                    <strong style="color:#fff;">${l.senderName || '-'}</strong>
-                    <span class="user-email">${l.senderEmail}</span>
+                    <span class="mono" style="color:#6ee7b7; font-weight:700; font-size:0.86rem;">Link #${l.id}</span>
+                    <span class="user-email" style="color:var(--text-muted);">Pengirim: <strong style="color:#fff;">${l.senderName || '-'}</strong> (${l.senderEmail})</span>
                   </div>
-                </td>
-                <td data-label="Proteksi & Timer">
-                  <div>
-                    <div>${modeLabel}</div>
-                    <span class="sub-detail">⏱️ Timer: ${l.viewTimerSeconds} detik</span>
+                  ${badgeHtml}
+                </div>
+
+                <div class="item-meta-grid">
+                  <div class="meta-box">
+                    <div class="meta-label">Proteksi & Timer</div>
+                    <div class="meta-value">${modeLabel}</div>
+                    <div class="meta-sub">⏱️ Durasi tampil: ${l.viewTimerSeconds} detik</div>
                   </div>
-                </td>
-                <td data-label="Status Pesan">${badgeHtml}</td>
-                <td data-label="Dibuat & Dibuka">
-                  <div>
-                    <div style="font-size:0.76rem;">Dibuat: ${formatDate(l.createdAt)}</div>
-                    <span class="sub-detail">${l.openedAt ? `🔥 Dibuka: ${formatDate(l.openedAt)}` : 'Belum dibuka'}</span>
+
+                  <div class="meta-box">
+                    <div class="meta-label">Waktu Dibuat & Dibuka</div>
+                    <div class="meta-value">Dibuat: ${formatDate(l.createdAt)}</div>
+                    <div class="meta-sub">${l.openedAt ? `🔥 Hancur: ${formatDate(l.openedAt)}` : `Batas: ${formatDate(l.expiresAt)}`}</div>
                   </div>
-                </td>
-                <td data-label="Pembuka & Aksi">
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;">
-                    <div>
-                      ${
-                        l.openerIp
-                          ? `<div style="font-size:0.75rem;">${shortUA(l.openerUserAgent)}</div><span class="ip-chip" title="${l.openerIp}">${l.openerIp}</span>`
-                          : '<span style="color:var(--text-muted); font-size:0.75rem;">-</span>'
-                      }
-                    </div>
-                    ${
-                      l.status === 'pending'
-                        ? `<button type="button" class="btn btn-danger btn-xs js-destroy-msg" data-id="${l.id}">🔥 Hancurkan</button>`
-                        : ''
-                    }
+
+                  <div class="meta-box">
+                    <div class="meta-label">Pembuka Pesan</div>
+                    <div class="meta-value">${l.openerIp ? shortUA(l.openerUserAgent) : 'Belum dibuka'}</div>
+                    <div class="meta-sub mono">${l.openerIp || '-'}</div>
                   </div>
-                </td>
-              </tr>
+                </div>
+
+                ${
+                  l.status === 'pending'
+                    ? `
+                      <div class="item-card-footer" style="justify-content:flex-end;">
+                        <button type="button" class="btn btn-danger btn-sm js-destroy-msg" data-id="${l.id}">
+                          🔥 Hancurkan Paksa Sekarang
+                        </button>
+                      </div>
+                    `
+                    : ''
+                }
+              </div>
             `;
           })
           .join('');
@@ -1663,11 +1525,13 @@
         if (!u) return;
 
         const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
+        const licInfo = getLicenseStatusObj(u);
+
         document.getElementById('modal-user-avatar').src = avatar;
         document.getElementById('modal-user-name').textContent = u.name || '-';
         document.getElementById('modal-user-email').textContent = u.email;
         document.getElementById('modal-user-machine').textContent = u.machineId || '-';
-        document.getElementById('modal-user-license').innerHTML = licenseBadgeHtml(u);
+        document.getElementById('modal-user-license').innerHTML = `${licInfo.badge} <div class="meta-sub" style="margin-top:4px;">${licInfo.sub}</div>`;
         document.getElementById('modal-user-ip').textContent = u.lastIp || '-';
         document.getElementById('modal-user-msg-count').textContent = `${u.messagesCreated || 0} pesan dibuat`;
         document.getElementById('modal-user-ua').textContent = u.userAgent || '-';
@@ -1679,19 +1543,22 @@
         };
 
         const userLogs = allLogs.filter((l) => l.senderEmail === u.email);
-        const modalLogsBody = document.getElementById('modal-user-logs-body');
+        const modalLogsList = document.getElementById('modal-user-logs-list');
         if (userLogs.length === 0) {
-          modalLogsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:18px;">Pengguna ini belum membuat link pesan rahasia.</td></tr>';
+          modalLogsList.innerHTML = '<div class="empty-state" style="padding:18px;">Pengguna ini belum membuat link pesan rahasia.</div>';
         } else {
-          modalLogsBody.innerHTML = userLogs
+          modalLogsList.innerHTML = userLogs
             .map((l) => `
-              <tr>
-                <td data-label="ID Link" class="mono" style="color:#6ee7b7;">#${l.id}</td>
-                <td data-label="Mode">${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'} (${l.viewTimerSeconds}s)</td>
-                <td data-label="Status">${l.status === 'destroyed' ? '🔥 Hancur' : l.status === 'expired' ? '⌛ Expired' : '⏳ Menunggu'}</td>
-                <td data-label="Dibuat">${formatDate(l.createdAt)}</td>
-                <td data-label="Dibuka">${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
-              </tr>
+              <div class="meta-box" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                <div>
+                  <span class="mono" style="color:#6ee7b7; font-weight:700;">#${l.id}</span>
+                  <span style="font-size:0.75rem; color:var(--text-muted); margin-left:6px;">${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'} (${l.viewTimerSeconds}s)</span>
+                  <div class="meta-sub">Dibuat: ${formatDate(l.createdAt)} ${l.openedAt ? `• Dibuka: ${formatDate(l.openedAt)}` : ''}</div>
+                </div>
+                <span class="badge ${l.status === 'destroyed' ? 'badge-destroyed' : l.status === 'expired' ? 'badge-expired' : 'badge-pending'}">
+                  ${l.status === 'destroyed' ? '🔥 Hancur' : l.status === 'expired' ? '⌛ Expired' : '⏳ Menunggu'}
+                </span>
+              </div>
             `)
             .join('');
         }
@@ -1705,7 +1572,8 @@
 
         try {
           const res = await fetch('/api/admin/dashboard', {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store'
           });
           if (res.status === 401) {
             setAdminToken('');
@@ -1722,13 +1590,13 @@
       function updateDashboardState(data) {
         const st = data.stats || {};
         statTotalUsers.textContent = st.totalUsers ?? 0;
-        statActiveSub.textContent = `🟢 ${st.activeUsersToday ?? 0} aktif 24 jam terakhir`;
+        statActiveSub.textContent = `🟢 ${st.activeUsersToday ?? 0} aktif hari ini`;
         statLicensedUsers.textContent = st.licensedUsers ?? 0;
-        statUnlicensedSub.textContent = `${st.unlicensedUsers ?? 0} mode Trial / menunggu`;
+        statUnlicensedSub.textContent = `${st.unlicensedUsers ?? 0} mode Trial`;
         statTotalMessages.textContent = st.totalMessages ?? 0;
         statPendingSub.textContent = `${st.pendingMessages ?? 0} menunggu dibuka`;
         statDestroyedMessages.textContent = st.destroyedMessages ?? 0;
-        statExpiredSub.textContent = `${st.expiredMessages ?? 0} kedaluwarsa otomatis`;
+        statExpiredSub.textContent = `${st.expiredMessages ?? 0} kedaluwarsa`;
 
         const newUsersList = data.users || [];
         if (lastKnownUserEmails !== null) {
@@ -1745,8 +1613,8 @@
         allLogs = data.logs || [];
         tabCountUsers.textContent = allUsers.length;
         tabCountLogs.textContent = allLogs.length;
-        renderUsersTable();
-        renderLogsTable();
+        renderUsersList();
+        renderLogsList();
       }
 
       async function syncLicensesWithVocml(email = null) {
@@ -1830,7 +1698,7 @@
       bannerTestPushBtn.addEventListener('click', triggerTestWebPush);
 
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch(() => {});
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data?.type === 'PUSH_NEW_USER') {
             playNotificationChime();
@@ -1839,7 +1707,6 @@
         });
       }
 
-      // PWA Install Prompt untuk Admin Dashboard
       let deferredAdminPwaPrompt = null;
       const isStandaloneAdmin = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       const isIosDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -1866,7 +1733,7 @@
             }
             deferredAdminPwaPrompt = null;
           } else if (isIosDevice) {
-            alert('Untuk menginstall PWA Admin di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).\n3. Buka aplikasi dari Layar Utama lalu klik "Aktifkan Notifikasi HP".');
+            alert('Untuk menginstall PWA Admin di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).\n3. Buka aplikasi dari Layar Utama lalu klik "Aktifkan Push HP".');
           }
         });
       }
@@ -1876,8 +1743,8 @@
         showLogin();
       });
 
-      userSearchInput.addEventListener('input', renderUsersTable);
-      logSearchInput.addEventListener('input', renderLogsTable);
+      userSearchInput.addEventListener('input', renderUsersList);
+      logSearchInput.addEventListener('input', renderLogsList);
 
       document.getElementById('user-filter-pills').addEventListener('click', (e) => {
         const btn = e.target.closest('.filter-pill');
@@ -1885,7 +1752,7 @@
         document.querySelectorAll('#user-filter-pills .filter-pill').forEach((el) => el.classList.remove('active'));
         btn.classList.add('active');
         activeUserFilter = btn.dataset.filter || 'all';
-        renderUsersTable();
+        renderUsersList();
       });
 
       document.getElementById('log-filter-pills').addEventListener('click', (e) => {
@@ -1894,10 +1761,10 @@
         document.querySelectorAll('#log-filter-pills .filter-pill').forEach((el) => el.classList.remove('active'));
         btn.classList.add('active');
         activeLogFilter = btn.dataset.filter || 'all';
-        renderLogsTable();
+        renderLogsList();
       });
 
-      usersTableBody.addEventListener('click', async (e) => {
+      usersCardsList.addEventListener('click', async (e) => {
         const copyBtn = e.target.closest('.js-copy-machine');
         if (copyBtn) {
           const code = copyBtn.dataset.machine || '';
@@ -1933,7 +1800,7 @@
         }
       });
 
-      logsTableBody.addEventListener('click', async (e) => {
+      logsCardsList.addEventListener('click', async (e) => {
         const destroyBtn = e.target.closest('.js-destroy-msg');
         if (!destroyBtn) return;
         const msgId = destroyBtn.dataset.id;
