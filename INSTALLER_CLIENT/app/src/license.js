@@ -40,8 +40,9 @@ const VOCML_PRODUCT = ['pos', 'billiard'].includes(process.env.VOCML_PRODUCT)
 const VOCML_PUBLIC_KEY = process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY;
 export const FREE_TRIAL_LIMIT = Number(process.env.FREE_TRIAL_LIMIT) || 10;
 
-// Cache per akun Gmail agar tahan jika koneksi internet ke vocml.vocpos.id sempat terputus
+// Cache per akun Gmail agar tahan jika koneksi internet ke vocml.vocpos.id sempat terputus (TTL: 60 detik)
 const userLicenseCache = new Map();
+const CACHE_TTL_MS = 60 * 1000;
 
 /**
  * Menghasilkan Machine ID unik & deterministik untuk setiap alamat email Gmail.
@@ -58,7 +59,7 @@ export function emailToMachineId(email) {
  * Setiap user Gmail baru otomatis mendapatkan Trial Gratis 10x Pesan selama status VOC ML masih 'pending'.
  * Begitu 10x pesan gratis habis (messagesCreated >= 10), user wajib mengaktifkan lisensi berbayar.
  */
-export async function verifyUserAccountLicense({ email, name, messagesCreated = 0 }) {
+export async function verifyUserAccountLicense({ email, name, messagesCreated = 0, bypassCache = false }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanName = String(name || cleanEmail.split('@')[0]).trim();
   const machineId = emailToMachineId(cleanEmail);
@@ -68,6 +69,13 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
 
   const trialUsed = Math.max(0, Number(messagesCreated) || 0);
   const trialRemaining = Math.max(0, FREE_TRIAL_LIMIT - trialUsed);
+
+  if (!bypassCache) {
+    const cached = userLicenseCache.get(cleanEmail);
+    if (cached && Date.now() - cached.checkedAt < CACHE_TTL_MS) {
+      return cached;
+    }
+  }
 
   try {
     const qs = new URLSearchParams({
@@ -205,6 +213,14 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       billing: null
     };
   }
+}
+
+export function invalidateUserLicenseCache(email) {
+  if (!email) {
+    userLicenseCache.clear();
+    return;
+  }
+  userLicenseCache.delete(String(email).trim().toLowerCase());
 }
 
 export function getLicenseStatus() {

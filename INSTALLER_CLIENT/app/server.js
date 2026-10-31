@@ -52,7 +52,7 @@ import {
   saveAppSettings
 } from './src/db.js';
 
-import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML } from './src/license.js';
+import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML, invalidateUserLicenseCache } from './src/license.js';
 import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src/webpush.js';
 
 const PORT = Number(process.env.PORT) || 3006;
@@ -625,10 +625,12 @@ const server = http.createServer(async (req, res) => {
 
       for (const u of targetUsers) {
         try {
+          invalidateUserLicenseCache(u.email);
           const lic = await verifyUserAccountLicense({
             email: u.email,
             name: u.name,
-            messagesCreated: u.messagesCreated
+            messagesCreated: u.messagesCreated,
+            bypassCache: true
           });
           await updateUserLicenseInDb({
             email: u.email,
