@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pesanrahasia-pwa-v3';
+const CACHE_NAME = 'pesanrahasia-pwa-v4';
 const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/icon-192.png',

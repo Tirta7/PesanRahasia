@@ -26,6 +26,7 @@
   const licReasonText = document.getElementById('lic-reason-text');
   const licMachineId = document.getElementById('lic-machine-id');
   const copyMidBtn = document.getElementById('copy-mid-btn');
+  const waAdminActivateBtn = document.getElementById('wa-admin-activate-btn');
   const backToTrialBtn = document.getElementById('back-to-trial-btn');
   const switchAccountBtn = document.getElementById('switch-account-btn');
   const licQrisBox = document.getElementById('lic-qris-box');
@@ -50,17 +51,32 @@
   const createForm = document.getElementById('create-form');
   const secretInput = document.getElementById('secret-input');
   const charCounter = document.getElementById('char-counter');
+  const secretImageInput = document.getElementById('secret-image-input');
+  const imagePreviewBox = document.getElementById('image-preview-box');
+  const imagePreviewEl = document.getElementById('image-preview-el');
+  const imagePreviewInfo = document.getElementById('image-preview-info');
+  const removeImageBtn = document.getElementById('remove-image-btn');
   const protectionModeSelect = document.getElementById('protection-mode');
   const viewTimerSelect = document.getElementById('view-timer');
+  const secretPinInput = document.getElementById('secret-pin-input');
+  const ttlSelect = document.getElementById('ttl-select');
   const generateBtn = document.getElementById('generate-btn');
+
+  const myMessagesList = document.getElementById('my-messages-list');
+  const userPushBtn = document.getElementById('user-push-btn');
 
   const generatedLinkInput = document.getElementById('generated-link');
   const copyLinkBtn = document.getElementById('copy-link-btn');
   const copyBtnText = document.getElementById('copy-btn-text');
+  const sharePinReminder = document.getElementById('share-pin-reminder');
+  const sharePinCode = document.getElementById('share-pin-code');
   const whatsappShareBtn = document.getElementById('whatsapp-share-btn');
   const nativeShareBtn = document.getElementById('native-share-btn');
   const createAnotherBtn = document.getElementById('create-another-btn');
 
+  const gatePinBox = document.getElementById('gate-pin-box');
+  const gatePinInput = document.getElementById('gate-pin-input');
+  const gatePinHint = document.getElementById('gate-pin-hint');
   const revealConfirmBtn = document.getElementById('reveal-confirm-btn');
   const secretStage = document.getElementById('secret-stage');
   const secretTextBlurred = document.getElementById('secret-text-blurred');
@@ -84,9 +100,13 @@
   let activeMode = 'spotlight';
   let countdownInterval = null;
   let licensePollInterval = null;
+  let myMessagesPollInterval = null;
   let isMessageActive = false;
   let currentUser = null;
   let currentLicense = null;
+  let attachedImageDataUrl = '';
+  let publicConfig = { googleClientId: '', adminWhatsapp: '', vapidPublicKey: '' };
+  let knownPendingIds = null;
 
   function getSessionToken() {
     try {
@@ -108,14 +128,36 @@
     }
   }
 
+  function playAlertSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      [659.25, 987.77].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.13);
+        gain.gain.setValueAtTime(0.15, now + idx * 0.13);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.13 + 0.32);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.13);
+        osc.stop(now + idx * 0.13 + 0.34);
+      });
+    } catch {
+      // Abaikan
+    }
+  }
+
   // ============================================================================
   // 1. UTILITAS ENKRIPSI END-TO-END (AES-256-GCM + Fallback untuk Non-HTTPS LAN)
   // ============================================================================
 
   function bytesToBase64Url(bytes) {
     let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
     }
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
@@ -219,6 +261,70 @@
     return decoder.decode(decryptedBuf);
   }
 
+  // Kompresi Gambar di Browser sebelum Dienkripsi E2EE
+  function compressImageToDataUrl(file, maxDim = 1100, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve({ dataUrl, width: w, height: h });
+        };
+        img.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (secretImageInput) {
+    secretImageInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ Harap pilih file gambar (JPG, PNG, atau WebP).');
+        return;
+      }
+      try {
+        const { dataUrl, width, height } = await compressImageToDataUrl(file);
+        attachedImageDataUrl = dataUrl;
+        imagePreviewEl.src = dataUrl;
+        const sizeKb = Math.round((dataUrl.length * 3) / 4 / 1024);
+        imagePreviewInfo.textContent = `🔒 Siap dienkripsi AES-256 (${width}×${height}px • ~${sizeKb} KB)`;
+        imagePreviewBox.classList.remove('hidden');
+        showToast('🖼️ Gambar berhasil dilampirkan & siap dienkripsi E2EE.');
+      } catch (err) {
+        showToast('❌ ' + err.message);
+      }
+    });
+  }
+
+  if (removeImageBtn) {
+    removeImageBtn.addEventListener('click', () => {
+      attachedImageDataUrl = '';
+      if (secretImageInput) secretImageInput.value = '';
+      if (imagePreviewBox) imagePreviewBox.classList.add('hidden');
+    });
+  }
+
   // ============================================================================
   // 2. UI NAVIGATION, TOAST & GMAIL AUTHENTICATION
   // ============================================================================
@@ -237,7 +343,7 @@
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => {
       toastEl.classList.add('hidden');
-    }, 3200);
+    }, 3400);
   }
 
   function updateUserHeader(user, license) {
@@ -326,7 +432,20 @@
       licMachineId.textContent = license?.machineId || '-';
     }
 
-    // Tampilkan Tagihan QRIS Dinamis jika ada dari vocml.vocpos.id
+    if (waAdminActivateBtn) {
+      const waText =
+        `Halo Admin *PesanRahasia*,\n\n` +
+        `Saya ingin mengaktifkan *Lisensi Pro Unlimited* untuk akun saya:\n` +
+        `• Nama: *${user.name}*\n` +
+        `• Email Gmail: *${user.email}*\n` +
+        `• ID Lisensi (VOC ML): *${license?.machineId || '-'}*\n\n` +
+        `Mohon bantuannya untuk aktivasi. Terima kasih!`;
+      const targetPhone = publicConfig.adminWhatsapp || '';
+      waAdminActivateBtn.href = targetPhone
+        ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(waText)}`
+        : `https://wa.me/?text=${encodeURIComponent(waText)}`;
+    }
+
     if (licQrisBox && license?.billing && (license.billing.qris || license.billing.qris_image_url)) {
       const b = license.billing;
       qrisAmount.textContent = b.amount_text || `Rp ${(b.amount || 0).toLocaleString('id-ID')}`;
@@ -360,17 +479,206 @@
         if (!res.ok) return;
         const data = await res.json();
         updateUserHeader(data.user, data.license);
-        if (data.license && data.license.allowed && !data.license.isTrial) {
-          clearInterval(licensePollInterval);
-          showView(createView);
-          showToast('🎉 Lisensi Pro Akun Gmail Anda telah aktif! Silakan buat pesan tanpa batas.');
-        } else if (data.license) {
-          if (licReasonText) licReasonText.textContent = data.license.reason;
+        if (data.license && data.license.allowed && (!data.license.isTrial || accountLicenseView.classList.contains('hidden') === false)) {
+          if (!data.license.isTrial || (currentLicense && !currentLicense.allowed && data.license.allowed)) {
+            clearInterval(licensePollInterval);
+            showView(createView);
+            loadMyMessages();
+            showToast('🎉 Akun Gmail Anda telah aktif! Silakan buat pesan rahasia.');
+          }
+        } else if (data.license && licReasonText) {
+          licReasonText.textContent = data.license.reason;
         }
       } catch {
         // Abaikan error jaringan sementara
       }
     }, 5000);
+  }
+
+  // ============================================================================
+  // 2B. RIWAYAT LINK PESAN PENGIRIM & WEB PUSH READ-RECEIPT
+  // ============================================================================
+
+  function formatShortTime(d) {
+    if (!d) return '-';
+    return new Date(d).toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  async function loadMyMessages() {
+    const token = getSessionToken();
+    if (!token || !myMessagesList) return;
+    try {
+      const res = await fetch('/api/my-messages', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (!res.ok) return;
+      const { logs } = await res.json();
+      renderMyMessages(logs || []);
+    } catch {
+      // Abaikan
+    }
+  }
+
+  function renderMyMessages(logs) {
+    if (!myMessagesList) return;
+
+    // Deteksi jika ada pesan milik pengirim yang baru saja dibuka oleh penerima
+    if (knownPendingIds !== null) {
+      for (const l of logs) {
+        if (l.status === 'destroyed' && knownPendingIds.has(l.id)) {
+          playAlertSound();
+          showToast(`🔥 Pesan #${l.id} baru saja dibuka & dihancurkan! (${formatShortTime(l.openedAt)})`);
+        }
+      }
+    }
+    knownPendingIds = new Set(logs.filter((l) => l.status === 'pending').map((l) => l.id));
+
+    if (!logs.length) {
+      myMessagesList.innerHTML = '<div class="my-msg-empty">Belum ada riwayat link pesan yang Anda buat.</div>';
+      return;
+    }
+
+    myMessagesList.innerHTML = logs
+      .map((l) => {
+        let statusPill = '<span class="status-pill-mini pending">⏳ Menunggu Dibuka</span>';
+        let subText = `Dibuat: ${formatShortTime(l.createdAt)} • Batas: ${formatShortTime(l.expiresAt)}`;
+        if (l.status === 'destroyed') {
+          statusPill = '<span class="status-pill-mini destroyed">🔥 Sudah Dibuka & Hancur</span>';
+          subText = `🔥 Dibuka pada ${formatShortTime(l.openedAt)}`;
+        } else if (l.status === 'expired') {
+          statusPill = '<span class="status-pill-mini expired">⌛ Kedaluwarsa</span>';
+        }
+
+        const tags = [];
+        if (l.hasPin) tags.push('<span class="mini-tag">🔑 PIN</span>');
+        if (l.hasImage) tags.push('<span class="mini-tag">🖼️ Gambar</span>');
+        tags.push(`<span class="mini-tag">${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'}</span>`);
+
+        return `
+          <div class="my-msg-card">
+            <div class="my-msg-left">
+              <div class="my-msg-id-row">
+                <span class="my-msg-id">#${l.id}</span>
+                ${tags.join('')}
+              </div>
+              <span class="my-msg-sub">${subText}</span>
+            </div>
+            <div class="my-msg-right">
+              ${statusPill}
+              ${
+                l.status === 'pending'
+                  ? `<button type="button" class="btn-revoke-mini js-revoke-my-msg" data-id="${l.id}" title="Batalkan & hancurkan link ini sebelum dibuka penerima">🔥 Batalkan</button>`
+                  : ''
+              }
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  if (myMessagesList) {
+    myMessagesList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.js-revoke-my-msg');
+      if (!btn) return;
+      const msgId = btn.dataset.id;
+      if (!confirm(`Batalkan dan hancurkan pesan #${msgId} sekarang sehingga tidak bisa dibuka lagi?`)) return;
+      const token = getSessionToken();
+      try {
+        const res = await fetch(`/api/my-messages/${encodeURIComponent(msgId)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          knownPendingIds?.delete(msgId);
+          showToast(`🔥 Link pesan #${msgId} berhasil dibatalkan & dihancurkan.`);
+          loadMyMessages();
+        }
+      } catch {
+        showToast('⚠️ Gagal membatalkan pesan.');
+      }
+    });
+  }
+
+  function startMyMessagesPolling() {
+    clearInterval(myMessagesPollInterval);
+    loadMyMessages();
+    myMessagesPollInterval = setInterval(() => {
+      if (getSessionToken() && !isMessageActive) {
+        loadMyMessages();
+      }
+    }, 8000);
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/\//g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async function subscribeUserReadReceiptPush() {
+    const token = getSessionToken();
+    if (!token) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      alert('Untuk menerima notifikasi di iPhone/iPad, silakan klik "Install Aplikasi" / "Add to Home Screen" terlebih dahulu.');
+      return;
+    }
+
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        showToast('⚠️ Izin notifikasi ditolak di browser.');
+        return;
+      }
+
+      if (!publicConfig.vapidPublicKey) {
+        const cfgRes = await fetch('/api/auth/config');
+        publicConfig = await cfgRes.json();
+      }
+
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicConfig.vapidPublicKey)
+      });
+
+      const res = await fetch('/api/user/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ subscription: sub })
+      });
+
+      if (res.ok) {
+        if (userPushBtn) {
+          userPushBtn.textContent = '✓ Notif Dibuka Aktif';
+          userPushBtn.classList.add('active');
+        }
+        playAlertSound();
+        showToast('🔔 Aktif! HP Anda akan menerima notifikasi saat pesan rahasia dibuka penerima.');
+      }
+    } catch (err) {
+      showToast('⚠️ Gagal mengaktifkan notifikasi: ' + err.message);
+    }
+  }
+
+  if (userPushBtn) {
+    userPushBtn.addEventListener('click', subscribeUserReadReceiptPush);
   }
 
   function applyAuthAndLicenseState(user, license, isFreshLogin = false) {
@@ -384,6 +692,7 @@
     }
     clearInterval(licensePollInterval);
     showView(createView);
+    startMyMessagesPolling();
     if (isFreshLogin) {
       if (license && license.isTrial) {
         showToast(`🎁 Selamat datang ${user.name}! Anda mendapat Trial Gratis (${license.trialRemaining}/${license.trialLimit || 10} pesan).`);
@@ -393,14 +702,14 @@
     }
   }
 
-  async function initGoogleOAuthIfConfigured() {
+  async function loadPublicConfigAndGoogleOAuth() {
     try {
       const res = await fetch('/api/auth/config');
-      const cfg = await res.json();
-      if (cfg.googleClientId && window.google && window.google.accounts) {
+      publicConfig = await res.json();
+      if (publicConfig.googleClientId && window.google && window.google.accounts) {
         googleOauthContainer.classList.remove('hidden');
         window.google.accounts.id.initialize({
-          client_id: cfg.googleClientId,
+          client_id: publicConfig.googleClientId,
           callback: async (response) => {
             if (response.credential) {
               await handleGoogleLoginRequest({ credential: response.credential });
@@ -470,6 +779,7 @@
     backToTrialBtn.addEventListener('click', () => {
       clearInterval(licensePollInterval);
       showView(createView);
+      startMyMessagesPolling();
     });
   }
 
@@ -500,6 +810,7 @@
         }).catch(() => {});
       }
       clearInterval(licensePollInterval);
+      clearInterval(myMessagesPollInterval);
       setSessionToken('');
       updateUserHeader(null);
       showView(loginView);
@@ -522,8 +833,15 @@
     createForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = secretInput.value.trim();
-      if (!text) {
-        showToast('Silakan tulis pesan rahasia terlebih dahulu.');
+      const pin = secretPinInput ? secretPinInput.value.trim() : '';
+
+      if (!text && !attachedImageDataUrl) {
+        showToast('Silakan tulis pesan rahasia atau lampirkan gambar terlebih dahulu.');
+        return;
+      }
+
+      if (pin && (pin.length < 4 || pin.length > 16)) {
+        showToast('⚠️ PIN Pengaman harus terdiri dari 4 hingga 16 karakter.');
         return;
       }
 
@@ -536,12 +854,18 @@
 
       generateBtn.disabled = true;
       const originalBtnHtml = generateBtn.innerHTML;
-      generateBtn.innerHTML = '<span>🔐 Mengenkripsi & Membuat Link...</span>';
+      generateBtn.innerHTML = '<span>🔐 Mengenkripsi AES-256 & Membuat Link...</span>';
 
       try {
-        const encrypted = await encryptSecret(text);
+        const hasImage = Boolean(attachedImageDataUrl);
+        const payloadToEncrypt = hasImage
+          ? JSON.stringify({ __prBundle: 1, text, image: attachedImageDataUrl })
+          : text;
+
+        const encrypted = await encryptSecret(payloadToEncrypt);
         const protectionMode = protectionModeSelect.value;
         const viewTimerSeconds = Number(viewTimerSelect.value) || 60;
+        const ttlMinutes = ttlSelect ? Number(ttlSelect.value) || 1440 : 1440;
 
         const res = await fetch('/api/messages', {
           method: 'POST',
@@ -552,6 +876,9 @@
           body: JSON.stringify({
             ciphertext: encrypted.ciphertext,
             iv: encrypted.iv,
+            pin,
+            hasImage,
+            ttlMinutes,
             protectionMode,
             viewTimerSeconds
           })
@@ -582,15 +909,31 @@
         const secretUrl = `${baseUrl}/m/${data.id}#${encrypted.key}`;
         generatedLinkInput.value = secretUrl;
 
+        if (sharePinReminder && sharePinCode) {
+          if (pin) {
+            sharePinCode.textContent = pin;
+            sharePinReminder.classList.remove('hidden');
+          } else {
+            sharePinReminder.classList.add('hidden');
+          }
+        }
+
+        const pinNote = pin ? `\n🔑 *PIN Pembuka:* ${pin}\n` : '\n';
         const waMessage =
           `🔒 *Pesan Rahasia Sekali Baca*\n\n` +
-          `Saya mengirimkan pesan rahasia untuk Anda. Pesan ini hanya bisa dibuka *SATU KALI* dan akan otomatis hancur selamanya setelah Anda membukanya:\n\n` +
-          `${secretUrl}`;
+          `Saya mengirimkan pesan rahasia untuk Anda. Pesan ini hanya bisa dibuka *SATU KALI* dan akan otomatis hancur selamanya setelah Anda membukanya:\n` +
+          pinNote +
+          `\n${secretUrl}`;
         whatsappShareBtn.href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
 
         secretInput.value = '';
+        if (secretPinInput) secretPinInput.value = '';
+        attachedImageDataUrl = '';
+        if (secretImageInput) secretImageInput.value = '';
+        if (imagePreviewBox) imagePreviewBox.classList.add('hidden');
         charCounter.textContent = '0 / 5.000 karakter';
 
+        loadMyMessages();
         showView(shareView);
         showToast('✅ Link pesan rahasia berhasil dibuat!');
       } catch (err) {
@@ -648,18 +991,20 @@
         showToast('🔒 Kuota Trial 10x pesan gratis Anda telah habis. Silakan aktifkan lisensi akun.');
         return;
       }
+      loadMyMessages();
       showView(createView);
     });
   }
 
   // ============================================================================
-  // 4. ALUR PENERIMA PESAN: CEK, BUKA & LANGSUNG HANCURKAN (RECIPIENT FLOW)
+  // 4. ALUR PENERIMA PESAN: CEK, VERIFIKASI PIN, BUKA & HANCURKAN (RECIPIENT)
   // ============================================================================
 
   async function checkRoute() {
+    await loadPublicConfigAndGoogleOAuth();
+
     const match = window.location.pathname.match(/^\/m\/([A-Za-z0-9_-]+)$/);
     if (match) {
-      // Penerima pesan di WhatsApp TIDAK perlu login untuk membuka link
       const messageId = match[1];
       const keyFromHash = window.location.hash.replace(/^#/, '').trim();
 
@@ -675,7 +1020,6 @@
       return;
     }
 
-    // Halaman Pengirim (/): Cek apakah sudah login dengan akun Gmail
     const token = getSessionToken();
     if (token) {
       try {
@@ -695,7 +1039,6 @@
 
     updateUserHeader(null);
     showView(loginView);
-    initGoogleOAuthIfConfigured();
   }
 
   async function verifyMessageExists(messageId, keyFromHash) {
@@ -713,8 +1056,18 @@
         return;
       }
 
+      const meta = await res.json();
+      if (gatePinBox) {
+        if (meta.hasPin) {
+          gatePinBox.classList.remove('hidden');
+          if (gatePinInput) gatePinInput.value = '';
+        } else {
+          gatePinBox.classList.add('hidden');
+        }
+      }
+
       showView(gateView);
-      revealConfirmBtn.onclick = () => consumeAndRevealMessage(messageId, keyFromHash);
+      revealConfirmBtn.onclick = () => consumeAndRevealMessage(messageId, keyFromHash, Boolean(meta.hasPin));
     } catch {
       showDestroyedScreen(
         'Gagal Memuat Pesan',
@@ -723,17 +1076,39 @@
     }
   }
 
-  async function consumeAndRevealMessage(messageId, keyFromHash) {
+  async function consumeAndRevealMessage(messageId, keyFromHash, requiresPin = false) {
+    const pinVal = gatePinInput ? gatePinInput.value.trim() : '';
+    if (requiresPin && !pinVal) {
+      showToast('🔑 Silakan masukkan PIN Rahasia dari pengirim terlebih dahulu.');
+      if (gatePinInput) gatePinInput.focus();
+      return;
+    }
+
     revealConfirmBtn.disabled = true;
-    revealConfirmBtn.textContent = '🔥 Menghancurkan dari Server & Membuka Pesan...';
+    const origBtnText = revealConfirmBtn.textContent;
+    revealConfirmBtn.textContent = '🔥 Memverifikasi & Membuka Pesan...';
 
     try {
       const res = await fetch(`/api/messages/${encodeURIComponent(messageId)}/consume`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinVal })
       });
 
       const data = await res.json();
+
+      // Jika PIN salah namun masih ada sisa percobaan, jangan hancurkan tampilan Gate
+      if (res.status === 403 && data.invalidPin) {
+        revealConfirmBtn.disabled = false;
+        revealConfirmBtn.textContent = origBtnText;
+        if (gatePinHint) {
+          gatePinHint.style.color = '#fca5a5';
+          gatePinHint.textContent = data.error;
+        }
+        showToast('❌ ' + data.error);
+        return;
+      }
+
       if (!res.ok) {
         showDestroyedScreen(
           'Pesan Sudah Dihancurkan!',
@@ -742,13 +1117,13 @@
         return;
       }
 
-      const plaintext = await decryptSecret(data.ciphertext, data.iv, keyFromHash);
+      const decryptedRaw = await decryptSecret(data.ciphertext, data.iv, keyFromHash);
 
       if (window.history && window.history.replaceState) {
         window.history.replaceState(null, 'Pesan Rahasia Dihancurkan', `/m/${messageId}`);
       }
 
-      renderSecretProtected(plaintext, data.protectionMode || 'spotlight', data.viewTimerSeconds || 60);
+      renderSecretProtected(decryptedRaw, data.protectionMode || 'spotlight', data.viewTimerSeconds || 60);
     } catch {
       showDestroyedScreen(
         'Gagal Mendekripsi Pesan',
@@ -760,8 +1135,8 @@
   function showDestroyedScreen(title, message) {
     isMessageActive = false;
     clearInterval(countdownInterval);
-    secretTextBlurred.textContent = '';
-    secretTextClear.textContent = '';
+    secretTextBlurred.innerHTML = '';
+    secretTextClear.innerHTML = '';
     if (title) destroyedTitle.textContent = title;
     if (message) destroyedMessage.textContent = message;
     showView(destroyedView);
@@ -789,7 +1164,7 @@
 
     if (mode === 'spotlight') {
       secretStage.classList.add('mode-spotlight');
-      readerInstruction.textContent = '🔦 Sentuh & geser jari/kursor di dalam kotak untuk menyinari sebagian teks:';
+      readerInstruction.textContent = '🔦 Sentuh & geser jari/kursor di dalam kotak untuk menyinari sebagian pesan:';
       holdToReadBtn.classList.add('hidden');
       shieldTitle.textContent = 'Mode Spotlight Anti-Screenshot Aktif';
       shieldDesc.textContent = 'Sentuh atau arahkan kursor ke dalam kotak ini untuk membaca pesan melalui lubang intip.';
@@ -820,10 +1195,42 @@
     privacyShield.classList.add('shield-hidden');
   }
 
-  function renderSecretProtected(plaintext, initialMode, timerSeconds) {
+  function populateSecretLayer(container, text, imageDataUrl) {
+    container.innerHTML = '';
+    if (text) {
+      const p = document.createElement('div');
+      p.textContent = text;
+      container.appendChild(p);
+    }
+    if (imageDataUrl && imageDataUrl.startsWith('data:image/')) {
+      const img = document.createElement('img');
+      img.src = imageDataUrl;
+      img.alt = 'Lampiran Rahasia Sekali Lihat';
+      img.className = 'secret-image-render';
+      container.appendChild(img);
+    }
+  }
+
+  function renderSecretProtected(decryptedRaw, initialMode, timerSeconds) {
     isMessageActive = true;
-    secretTextBlurred.textContent = plaintext;
-    secretTextClear.textContent = plaintext;
+
+    let textContent = decryptedRaw;
+    let imageDataUrl = '';
+    try {
+      if (decryptedRaw.startsWith('{')) {
+        const parsed = JSON.parse(decryptedRaw);
+        if (parsed && parsed.__prBundle === 1) {
+          textContent = parsed.text || '';
+          imageDataUrl = parsed.image || '';
+        }
+      }
+    } catch {
+      textContent = decryptedRaw;
+    }
+
+    populateSecretLayer(secretTextBlurred, textContent, imageDataUrl);
+    populateSecretLayer(secretTextClear, textContent, imageDataUrl);
+
     populateWatermark();
     setProtectionMode(initialMode === 'hold' ? 'hold' : 'spotlight');
     showView(secretView);

@@ -804,7 +804,7 @@
 
       .item-actions {
         display: grid;
-        grid-template-columns: 1fr 1fr auto;
+        grid-template-columns: repeat(2, 1fr);
         width: 100%;
       }
 
@@ -1430,11 +1430,14 @@
                     <button type="button" class="btn btn-outline btn-sm js-user-detail" data-email="${u.email}">
                       🔍 Detail
                     </button>
+                    <button type="button" class="btn btn-primary btn-sm js-reset-trial" data-id="${u.id}" data-email="${u.email}" title="Reset kuota Trial 10x pesan gratis pengguna ini ke 0/10">
+                      🎁 Reset Trial
+                    </button>
                     <button type="button" class="btn btn-amber btn-sm js-sync-user" data-email="${u.email}">
                       🔄 Cek VOC ML
                     </button>
                     <button type="button" class="btn btn-danger btn-sm js-delete-user" data-id="${u.id}" data-email="${u.email}" title="Hapus pengguna">
-                      🗑️
+                      🗑️ Hapus
                     </button>
                   </div>
                 </div>
@@ -1472,12 +1475,17 @@
             }
 
             const modeLabel = l.protectionMode === 'hold' ? '👆 Tahan Tombol (Hold)' : '🔦 Spotlight Anti-Screenshot';
+            const extraBadges = [
+              l.hasPin ? '🔑 PIN Ganda' : '',
+              l.hasImage ? '🖼️ Gambar E2EE' : ''
+            ].filter(Boolean).join(' • ');
 
             return `
               <div class="item-card">
                 <div class="item-card-top">
                   <div>
                     <span class="mono" style="color:#6ee7b7; font-weight:700; font-size:0.86rem;">Link #${l.id}</span>
+                    ${extraBadges ? `<span class="badge badge-expired" style="margin-left:6px; font-size:0.66rem;">${extraBadges}</span>` : ''}
                     <span class="user-email" style="color:var(--text-muted);">Pengirim: <strong style="color:#fff;">${l.senderName || '-'}</strong> (${l.senderEmail})</span>
                   </div>
                   ${badgeHtml}
@@ -1782,6 +1790,22 @@
         const syncBtn = e.target.closest('.js-sync-user');
         if (syncBtn) {
           await syncLicensesWithVocml(syncBtn.dataset.email);
+          return;
+        }
+
+        const resetTrialBtn = e.target.closest('.js-reset-trial');
+        if (resetTrialBtn) {
+          const email = resetTrialBtn.dataset.email;
+          if (!confirm(`Reset kuota Trial pengguna ${email} menjadi 10x pesan gratis baru (0/10 terpakai)?`)) return;
+          const res = await fetch(`/api/admin/users/${resetTrialBtn.dataset.id}/reset-trial`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${getAdminToken()}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            updateDashboardState(data);
+            showToast(`🎁 Kuota Trial 10x untuk ${email} berhasil di-reset!`);
+          }
           return;
         }
 

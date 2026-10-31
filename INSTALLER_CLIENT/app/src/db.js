@@ -6,13 +6,15 @@ const { Pool } = pg;
  * Modul Database PostgreSQL untuk PesanRahasia:
  * 1. Tabel `users` & `user_sessions` -> Menyimpan data pengguna yang login dengan Gmail.
  * 2. Tabel `secret_messages` -> Menyimpan ciphertext sekali baca (dihapus permanen saat dibaca).
- * 3. Tabel `message_logs` -> Menyimpan log aktivitas pengirim & status kapan pesan dibuka/hancur untuk Dashboard Admin.
+ * 3. Tabel `message_logs` -> Menyimpan log aktivitas pengirim & status kapan pesan dibuka/hancur.
+ * 4. Tabel `admin_push_subscriptions` & `user_push_subscriptions` -> Web Push Notification HP.
  */
 const memoryFallback = new Map();
 const memoryUsers = new Map();
 const memorySessions = new Map();
 const memoryLogs = new Map();
 const memoryPushSubscriptions = new Map();
+const memoryUserPushSubscriptions = new Map();
 
 let pool = null;
 let isPostgresReady = false;
@@ -54,6 +56,12 @@ async function ensureDatabaseExists(cfg) {
   }
 }
 
+export function hashPin(pin) {
+  const clean = String(pin || '').trim();
+  if (!clean) return null;
+  return crypto.createHash('sha256').update(`pr_pin:${clean}`).digest('hex');
+}
+
 export async function initDatabase() {
   const cfg = getDbConfig();
   await ensureDatabaseExists(cfg);
@@ -92,6 +100,9 @@ export async function initDatabase() {
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         ciphertext TEXT NOT NULL,
         iv VARCHAR(64) NOT NULL,
+        pin_hash VARCHAR(128),
+        has_image BOOLEAN NOT NULL DEFAULT FALSE,
+        pin_attempts INTEGER NOT NULL DEFAULT 0,
         protection_mode VARCHAR(20) NOT NULL DEFAULT 'spotlight',
         view_timer_seconds INTEGER NOT NULL DEFAULT 60,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -105,6 +116,8 @@ export async function initDatabase() {
         sender_email VARCHAR(255) NOT NULL,
         sender_name VARCHAR(255) NOT NULL,
         sender_ip VARCHAR(64),
+        has_pin BOOLEAN NOT NULL DEFAULT FALSE,
+        has_image BOOLEAN NOT NULL DEFAULT FALSE,
         protection_mode VARCHAR(20) NOT NULL DEFAULT 'spotlight',
         view_timer_seconds INTEGER NOT NULL DEFAULT 60,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -117,8 +130,13 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_message_logs_created_at ON message_logs(created_at DESC);
     `);
 
-    // Pastikan kolom user_id & kolom lisensi VOC ML ada jika tabel dibuat dari versi sebelumnya
+    // Pastikan kolom tambahan tersedia pada database versi lama
     await pool.query(`ALTER TABLE secret_messages ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`).catch(() => {});
+    await pool.query(`ALTER TABLE secret_messages ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(128);`).catch(() => {});
+    await pool.query(`ALTER TABLE secret_messages ADD COLUMN IF NOT EXISTS has_image BOOLEAN NOT NULL DEFAULT FALSE;`).catch(() => {});
+    await pool.query(`ALTER TABLE secret_messages ADD COLUMN IF NOT EXISTS pin_attempts INTEGER NOT NULL DEFAULT 0;`).catch(() => {});
+    await pool.query(`ALTER TABLE message_logs ADD COLUMN IF NOT EXISTS has_pin BOOLEAN NOT NULL DEFAULT FALSE;`).catch(() => {});
+    await pool.query(`ALTER TABLE message_logs ADD COLUMN IF NOT EXISTS has_image BOOLEAN NOT NULL DEFAULT FALSE;`).catch(() => {});
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS machine_id VARCHAR(64);`).catch(() => {});
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_status VARCHAR(32) DEFAULT 'pending';`).catch(() => {});
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_expires_at VARCHAR(64);`).catch(() => {});
@@ -131,10 +149,20 @@ export async function initDatabase() {
         user_agent TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS user_push_subscriptions (
+        endpoint TEXT PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_user_push_email ON user_push_subscriptions(user_email);
     `).catch(() => {});
 
     isPostgresReady = true;
-    console.log('[PostgreSQL] ✅ Terhubung ke PostgreSQL & tabel (users, secret_messages, message_logs) siap digunakan.');
+    console.log('[PostgreSQL] ✅ Terhubung ke PostgreSQL & tabel siap digunakan.');
     return true;
   } catch (err) {
     isPostgresReady = false;
@@ -180,7 +208,6 @@ export async function loginOrRegisterGmailUser({ email, name, picture = '', ip =
     return { user, token: sessionToken, isNewUser };
   }
 
-  // Fallback In-Memory
   let existing = memoryUsers.get(cleanEmail);
   const isNewUser = !existing;
   if (!existing) {
@@ -264,6 +291,31 @@ export async function updateUserLicenseInDb({ email, machineId, status, expiresA
   }
 }
 
+export async function resetUserTrialQuota(userId) {
+  if (isPostgresReady && pool) {
+    const res = await pool.query(
+      `UPDATE users
+       SET messages_created = 0,
+           license_status = CASE WHEN license_status IN ('active', 'expiring') THEN license_status ELSE 'trial' END
+       WHERE id = $1
+       RETURNING id, email, name, messages_created AS "messagesCreated"`,
+      [userId]
+    );
+    return res.rows[0] || null;
+  }
+
+  for (const [, u] of memoryUsers.entries()) {
+    if (String(u.id) === String(userId)) {
+      u.messagesCreated = 0;
+      if (u.licenseStatus !== 'active' && u.licenseStatus !== 'expiring') {
+        u.licenseStatus = 'trial';
+      }
+      return u;
+    }
+  }
+  return null;
+}
+
 // ============================================================================
 // MANAJEMEN PESAN RAHASIA & LOG AKTIVITAS
 // ============================================================================
@@ -274,15 +326,20 @@ export async function createSecretMessage({
   senderIp = '',
   ciphertext,
   iv,
+  pin = '',
+  hasImage = false,
   protectionMode,
   viewTimerSeconds,
   expiresAt
 }) {
+  const pinHash = hashPin(pin);
+  const hasPin = Boolean(pinHash);
+
   if (isPostgresReady && pool) {
     await pool.query(
-      `INSERT INTO secret_messages (id, user_id, ciphertext, iv, protection_mode, view_timer_seconds, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7 / 1000.0))`,
-      [id, user?.id || null, ciphertext, iv, protectionMode, viewTimerSeconds, expiresAt]
+      `INSERT INTO secret_messages (id, user_id, ciphertext, iv, pin_hash, has_image, protection_mode, view_timer_seconds, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9 / 1000.0))`,
+      [id, user?.id || null, ciphertext, iv, pinHash, Boolean(hasImage), protectionMode, viewTimerSeconds, expiresAt]
     );
 
     if (user?.id) {
@@ -290,14 +347,16 @@ export async function createSecretMessage({
     }
 
     await pool.query(
-      `INSERT INTO message_logs (id, user_id, sender_email, sender_name, sender_ip, protection_mode, view_timer_seconds, status, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', to_timestamp($8 / 1000.0))`,
+      `INSERT INTO message_logs (id, user_id, sender_email, sender_name, sender_ip, has_pin, has_image, protection_mode, view_timer_seconds, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', to_timestamp($10 / 1000.0))`,
       [
         id,
         user?.id || null,
         user?.email || 'anonymous@gmail.com',
         user?.name || 'Pengguna',
         senderIp,
+        hasPin,
+        Boolean(hasImage),
         protectionMode,
         viewTimerSeconds,
         expiresAt
@@ -310,8 +369,12 @@ export async function createSecretMessage({
     id,
     ciphertext,
     iv,
+    pinHash,
+    hasImage: Boolean(hasImage),
+    pinAttempts: 0,
     protectionMode,
     viewTimerSeconds,
+    senderEmail: user?.email || '',
     createdAt: Date.now(),
     expiresAt
   });
@@ -323,6 +386,8 @@ export async function createSecretMessage({
     senderEmail: user?.email || 'anonymous@gmail.com',
     senderName: user?.name || 'Pengguna',
     senderIp,
+    hasPin,
+    hasImage: Boolean(hasImage),
     protectionMode,
     viewTimerSeconds,
     status: 'pending',
@@ -338,6 +403,8 @@ export async function getSecretMessageMeta(id) {
   if (isPostgresReady && pool) {
     const res = await pool.query(
       `SELECT id,
+              (pin_hash IS NOT NULL) AS "hasPin",
+              has_image AS "hasImage",
               protection_mode AS "protectionMode",
               view_timer_seconds AS "viewTimerSeconds",
               EXTRACT(EPOCH FROM expires_at) * 1000 AS "expiresAt"
@@ -353,43 +420,110 @@ export async function getSecretMessageMeta(id) {
     if (record) memoryFallback.delete(id);
     return null;
   }
-  return record;
+  return {
+    id: record.id,
+    hasPin: Boolean(record.pinHash),
+    hasImage: Boolean(record.hasImage),
+    protectionMode: record.protectionMode,
+    viewTimerSeconds: record.viewTimerSeconds,
+    expiresAt: record.expiresAt
+  };
 }
 
-export async function consumeSecretMessage(id, { openerIp = '', openerUserAgent = '' } = {}) {
+export async function consumeSecretMessage(id, { pin = '', openerIp = '', openerUserAgent = '' } = {}) {
+  const inputPinHash = hashPin(pin);
+
   if (isPostgresReady && pool) {
+    const checkRes = await pool.query(
+      `SELECT id, pin_hash AS "pinHash", pin_attempts AS "pinAttempts"
+       FROM secret_messages
+       WHERE id = $1 AND expires_at > NOW()`,
+      [id]
+    );
+    const meta = checkRes.rows[0];
+    if (!meta) {
+      return { status: 'not_found', record: null };
+    }
+
+    if (meta.pinHash) {
+      if (!inputPinHash || inputPinHash !== meta.pinHash) {
+        const nextAttempts = (Number(meta.pinAttempts) || 0) + 1;
+        if (nextAttempts >= 5) {
+          await pool.query('DELETE FROM secret_messages WHERE id = $1', [id]);
+          await pool.query(
+            `UPDATE message_logs SET status = 'destroyed', opened_at = NOW(), opener_ip = $2 WHERE id = $1`,
+            [id, `${openerIp} (Salah PIN 5x - Auto Hancur)`]
+          ).catch(() => {});
+          return { status: 'pin_burned', record: null };
+        }
+        await pool.query('UPDATE secret_messages SET pin_attempts = $2 WHERE id = $1', [id, nextAttempts]);
+        return { status: 'invalid_pin', attemptsLeft: 5 - nextAttempts, record: null };
+      }
+    }
+
     const res = await pool.query(
       `DELETE FROM secret_messages
        WHERE id = $1 AND expires_at > NOW()
        RETURNING id,
                  ciphertext,
                  iv,
+                 has_image AS "hasImage",
                  protection_mode AS "protectionMode",
                  view_timer_seconds AS "viewTimerSeconds"`,
       [id]
     );
     const row = res.rows[0] || null;
-    if (row) {
-      await pool
-        .query(
-          `UPDATE message_logs
-           SET status = 'destroyed',
-               opened_at = NOW(),
-               opener_ip = $2,
-               opener_user_agent = $3
-           WHERE id = $1`,
-          [id, openerIp, openerUserAgent]
-        )
-        .catch(() => {});
+    if (!row) {
+      return { status: 'not_found', record: null };
     }
-    return row;
+
+    const logRes = await pool
+      .query(
+        `UPDATE message_logs
+         SET status = 'destroyed',
+             opened_at = NOW(),
+             opener_ip = $2,
+             opener_user_agent = $3
+         WHERE id = $1
+         RETURNING sender_email AS "senderEmail", sender_name AS "senderName"`,
+        [id, openerIp, openerUserAgent]
+      )
+      .catch(() => ({ rows: [] }));
+
+    const senderInfo = logRes?.rows?.[0] || {};
+    return {
+      status: 'ok',
+      record: {
+        ...row,
+        senderEmail: senderInfo.senderEmail || ''
+      }
+    };
   }
 
   const record = memoryFallback.get(id);
-  memoryFallback.delete(id);
   if (!record || record.expiresAt <= Date.now()) {
-    return null;
+    memoryFallback.delete(id);
+    return { status: 'not_found', record: null };
   }
+
+  if (record.pinHash) {
+    if (!inputPinHash || inputPinHash !== record.pinHash) {
+      record.pinAttempts = (record.pinAttempts || 0) + 1;
+      if (record.pinAttempts >= 5) {
+        memoryFallback.delete(id);
+        if (memoryLogs.has(id)) {
+          const log = memoryLogs.get(id);
+          log.status = 'destroyed';
+          log.openedAt = new Date().toISOString();
+          log.openerIp = `${openerIp} (Salah PIN 5x)`;
+        }
+        return { status: 'pin_burned', record: null };
+      }
+      return { status: 'invalid_pin', attemptsLeft: 5 - record.pinAttempts, record: null };
+    }
+  }
+
+  memoryFallback.delete(id);
   if (memoryLogs.has(id)) {
     const log = memoryLogs.get(id);
     log.status = 'destroyed';
@@ -397,7 +531,75 @@ export async function consumeSecretMessage(id, { openerIp = '', openerUserAgent 
     log.openerIp = openerIp;
     log.openerUserAgent = openerUserAgent;
   }
-  return record;
+  return { status: 'ok', record };
+}
+
+export async function getUserMessageLogs(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return [];
+
+  if (isPostgresReady && pool) {
+    await pool
+      .query(`UPDATE message_logs SET status = 'expired' WHERE status = 'pending' AND expires_at <= NOW()`)
+      .catch(() => {});
+
+    const res = await pool.query(
+      `SELECT id,
+              has_pin AS "hasPin",
+              has_image AS "hasImage",
+              protection_mode AS "protectionMode",
+              view_timer_seconds AS "viewTimerSeconds",
+              status,
+              created_at AS "createdAt",
+              expires_at AS "expiresAt",
+              opened_at AS "openedAt",
+              opener_user_agent AS "openerUserAgent"
+       FROM message_logs
+       WHERE sender_email = $1
+       ORDER BY created_at DESC
+       LIMIT 15`,
+      [cleanEmail]
+    );
+    return res.rows;
+  }
+
+  return Array.from(memoryLogs.values())
+    .filter((l) => l.senderEmail === cleanEmail)
+    .reverse()
+    .slice(0, 15);
+}
+
+export async function userRevokeSecretMessage(messageId, email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!messageId || !cleanEmail) return false;
+
+  if (isPostgresReady && pool) {
+    const check = await pool.query(
+      `SELECT id FROM message_logs WHERE id = $1 AND sender_email = $2 AND status = 'pending'`,
+      [messageId, cleanEmail]
+    );
+    if (check.rowCount === 0) return false;
+
+    await pool.query('DELETE FROM secret_messages WHERE id = $1', [messageId]);
+    await pool.query(
+      `UPDATE message_logs
+       SET status = 'destroyed',
+           opened_at = NOW(),
+           opener_ip = 'Dibatalkan oleh Pengirim',
+           opener_user_agent = 'Sender Self-Burn'
+       WHERE id = $1`,
+      [messageId]
+    );
+    return true;
+  }
+
+  const log = memoryLogs.get(messageId);
+  if (!log || log.senderEmail !== cleanEmail || log.status !== 'pending') return false;
+  memoryFallback.delete(messageId);
+  log.status = 'destroyed';
+  log.openedAt = new Date().toISOString();
+  log.openerIp = 'Dibatalkan oleh Pengirim';
+  return true;
 }
 
 // ============================================================================
@@ -406,7 +608,6 @@ export async function consumeSecretMessage(id, { openerIp = '', openerUserAgent 
 
 export async function getAdminDashboardData() {
   if (isPostgresReady && pool) {
-    // Tandai log yang sudah lewat waktu kedaluwarsanya
     await pool
       .query(`UPDATE message_logs SET status = 'expired' WHERE status = 'pending' AND expires_at <= NOW()`)
       .catch(() => {});
@@ -448,6 +649,8 @@ export async function getAdminDashboardData() {
           sender_email AS "senderEmail",
           sender_name AS "senderName",
           sender_ip AS "senderIp",
+          has_pin AS "hasPin",
+          has_image AS "hasImage",
           protection_mode AS "protectionMode",
           view_timer_seconds AS "viewTimerSeconds",
           status,
@@ -558,7 +761,7 @@ export function getStorageEngineName() {
 }
 
 // ============================================================================
-// MANAJEMEN WEB PUSH SUBSCRIPTION ADMIN (UNTUK NOTIFIKASI HP / PWA)
+// MANAJEMEN WEB PUSH SUBSCRIPTION ADMIN & PENGGUNA (READ RECEIPT)
 // ============================================================================
 
 export async function saveAdminPushSubscription(subscription, userAgent = '') {
@@ -615,3 +818,63 @@ export async function getAllAdminPushSubscriptions() {
   return Array.from(memoryPushSubscriptions.values());
 }
 
+export async function saveUserPushSubscription(email, subscription, userAgent = '') {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+    return false;
+  }
+
+  if (isPostgresReady && pool) {
+    await pool.query(
+      `INSERT INTO user_push_subscriptions (endpoint, user_email, p256dh, auth, user_agent, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (endpoint) DO UPDATE SET
+         user_email = EXCLUDED.user_email,
+         p256dh = EXCLUDED.p256dh,
+         auth = EXCLUDED.auth,
+         user_agent = EXCLUDED.user_agent`,
+      [subscription.endpoint, cleanEmail, subscription.keys.p256dh, subscription.keys.auth, userAgent]
+    );
+    return true;
+  }
+
+  memoryUserPushSubscriptions.set(subscription.endpoint, {
+    endpoint: subscription.endpoint,
+    email: cleanEmail,
+    keys: {
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth
+    },
+    userAgent
+  });
+  return true;
+}
+
+export async function getUserPushSubscriptionsByEmail(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return [];
+
+  if (isPostgresReady && pool) {
+    const res = await pool
+      .query(
+        'SELECT endpoint, p256dh, auth FROM user_push_subscriptions WHERE user_email = $1',
+        [cleanEmail]
+      )
+      .catch(() => ({ rows: [] }));
+    return res.rows.map((r) => ({
+      endpoint: r.endpoint,
+      keys: { p256dh: r.p256dh, auth: r.auth }
+    }));
+  }
+
+  return Array.from(memoryUserPushSubscriptions.values()).filter((s) => s.email === cleanEmail);
+}
+
+export async function removeUserPushSubscription(endpoint) {
+  if (!endpoint) return;
+  if (isPostgresReady && pool) {
+    await pool.query('DELETE FROM user_push_subscriptions WHERE endpoint = $1', [endpoint]).catch(() => {});
+    return;
+  }
+  memoryUserPushSubscriptions.delete(endpoint);
+}

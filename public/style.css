@@ -39,7 +39,9 @@
 textarea#secret-input,
 input#generated-link,
 input#login-name,
-input#login-email {
+input#login-email,
+input#secret-pin-input,
+input#gate-pin-input {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -1345,5 +1347,326 @@ input[type="password"]:focus {
     border-radius: 14px;
   }
 }
+
+/* ============================================================================
+   FITUR BARU: LAMPIRAN GAMBAR SEKALI LIHAT, PIN GANDA, & RIWAYAT PENGIRIM
+   ============================================================================ */
+
+.lic-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-attach-box {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px dashed rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.image-attach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.attach-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.btn-attach-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.42);
+  color: #6ee7b7;
+  padding: 7px 13px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+}
+
+.btn-attach-file:hover {
+  background: var(--primary);
+  color: #04130d;
+}
+
+.image-preview-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.image-preview-box img {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.image-preview-meta {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#image-preview-info {
+  font-size: 0.78rem;
+  color: #a7f3d0;
+  font-weight: 600;
+}
+
+.btn-remove-img {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  color: #fca5a5;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.share-pin-reminder {
+  margin-top: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.82rem;
+  color: #d1fae5;
+}
+
+.share-pin-reminder code {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #fde68a;
+  font-weight: 800;
+}
+
+.share-pin-reminder small {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.gate-pin-box {
+  text-align: left;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.gate-pin-box label {
+  display: block;
+  color: #fde68a;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.gate-pin-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.secret-image-render {
+  display: block;
+  max-width: 100%;
+  max-height: 340px;
+  margin: 12px auto 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  pointer-events: none;
+}
+
+/* Riwayat Link Pesan Saya (Sender Live Status) */
+.my-messages-section {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.my-messages-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.my-messages-header h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f3f4f6;
+}
+
+.my-messages-header p {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.btn-push-mini {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+}
+
+.btn-push-mini:hover {
+  background: var(--primary);
+  color: #04130d;
+}
+
+.btn-push-mini.active {
+  background: rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+}
+
+.my-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.my-msg-empty {
+  text-align: center;
+  padding: 18px 12px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 12px;
+}
+
+.my-msg-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.my-msg-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.my-msg-id-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.my-msg-id {
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6ee7b7;
+}
+
+.mini-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #d1d5db;
+}
+
+.my-msg-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.my-msg-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-pill-mini {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.status-pill-mini.pending {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  color: #fde68a;
+}
+
+.status-pill-mini.destroyed {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  color: #fca5a5;
+}
+
+.status-pill-mini.expired {
+  background: rgba(156, 163, 175, 0.14);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  color: #d1d5db;
+}
+
+.btn-revoke-mini {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.36);
+  color: #fca5a5;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-revoke-mini:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
 
 

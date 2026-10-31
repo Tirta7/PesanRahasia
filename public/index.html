@@ -80,7 +80,7 @@
           </svg>
         </div>
         <h1>Masuk dengan Akun Gmail</h1>
-        <p>Untuk membuat dan mengirim link pesan rahasia, silakan masuk menggunakan akun <strong>@gmail.com</strong> Anda terlebih dahulu.</p>
+        <p>Untuk membuat dan mengirim link pesan rahasia, silakan masuk menggunakan akun <strong>@gmail.com</strong> Anda terlebih dahulu. Akun baru otomatis mendapat <strong>Trial Gratis 10x Pesan</strong>.</p>
       </div>
 
       <!-- Tombol Google OAuth Resmi (Otomatis muncul jika GOOGLE_CLIENT_ID diatur) -->
@@ -177,13 +177,22 @@
           <span>Memeriksa status aktivasi dari server pusat setiap 5 detik... Halaman akan terbuka otomatis setelah diaktifkan.</span>
         </div>
 
-        <button type="button" id="back-to-trial-btn" class="btn btn-primary btn-block hidden" style="margin-bottom:10px;">
-          ← Lanjut Gunakan Sisa Kuota Trial Gratis
-        </button>
+        <div class="lic-actions-stack">
+          <a id="wa-admin-activate-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-block">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.53 5.862l-1.53 5.588 5.736-1.504c1.693.924 3.633 1.454 5.702 1.454 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+            </svg>
+            <span>Kirim ID Lisensi ke WhatsApp Admin (Aktivasi Pro)</span>
+          </a>
 
-        <button type="button" id="switch-account-btn" class="btn btn-outline btn-block">
-          🔄 Ganti Akun Gmail Lain
-        </button>
+          <button type="button" id="back-to-trial-btn" class="btn btn-primary btn-block hidden">
+            ← Lanjut Gunakan Sisa Kuota Trial Gratis
+          </button>
+
+          <button type="button" id="switch-account-btn" class="btn btn-outline btn-block">
+            🔄 Ganti Akun Gmail Lain
+          </button>
+        </div>
       </div>
     </section>
 
@@ -202,7 +211,7 @@
           </span>
           <h1>Buat Pesan Rahasia</h1>
         </div>
-        <p>Tulis pesan Anda, ubah menjadi link sekali pakai, dan kirimkan lewat WhatsApp atau aplikasi chat lainnya. Begitu dibuka, pesan otomatis <strong>dihancurkan selamanya</strong>.</p>
+        <p>Tulis pesan atau lampirkan gambar rahasia, ubah menjadi link sekali pakai, dan kirimkan lewat WhatsApp. Begitu dibuka, pesan otomatis <strong>dihancurkan selamanya</strong>.</p>
       </div>
 
       <!-- Info Kuota Trial 10x Pesan Gratis -->
@@ -233,15 +242,38 @@
           <div class="textarea-wrapper">
             <textarea
               id="secret-input"
-              rows="6"
+              rows="5"
               maxlength="5000"
               placeholder="Ketik pesan rahasia, password, PIN, atau informasi sensitif di sini..."
-              required
             ></textarea>
           </div>
         </div>
 
-        <!-- Pengaturan Proteksi -->
+        <!-- Lampiran Gambar Sekali Lihat (Terenkripsi E2EE di Browser) -->
+        <div class="form-group">
+          <div class="image-attach-box">
+            <div class="image-attach-header">
+              <div>
+                <span class="attach-title">🖼️ Lampirkan Gambar Sekali Lihat (Opsional)</span>
+                <small class="option-hint" style="display:block;">Foto KTP, bukti transfer, atau screenshot sensitif. Ikut dienkripsi AES-256 & anti-screenshot.</small>
+              </div>
+              <label for="secret-image-input" class="btn-attach-file">
+                📷 Pilih Gambar
+              </label>
+              <input type="file" id="secret-image-input" accept="image/*" class="hidden" />
+            </div>
+
+            <div id="image-preview-box" class="image-preview-box hidden">
+              <img id="image-preview-el" src="" alt="Preview Lampiran Rahasia" />
+              <div class="image-preview-meta">
+                <span id="image-preview-info">Gambar siap dienkripsi E2EE</span>
+                <button type="button" id="remove-image-btn" class="btn-remove-img">✕ Hapus Gambar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pengaturan Proteksi & PIN Ganda -->
         <div class="options-grid">
           <div class="option-box">
             <label for="protection-mode">Mode Anti-Screenshot</label>
@@ -262,6 +294,30 @@
             </select>
             <small class="option-hint">Layar otomatis bersih saat waktu habis.</small>
           </div>
+
+          <div class="option-box">
+            <label for="secret-pin-input">🔑 PIN Pengaman Penerima (Opsional)</label>
+            <input
+              type="text"
+              id="secret-pin-input"
+              maxlength="16"
+              placeholder="Kosongkan jika tanpa PIN (min. 4 digit)"
+              style="padding: 9px 11px; font-size: 0.86rem;"
+            />
+            <small class="option-hint">Penerima wajib memasukkan PIN ini sebelum pesan bisa dibuka (salah 5x otomatis hangus).</small>
+          </div>
+
+          <div class="option-box">
+            <label for="ttl-select">⏳ Masa Berlaku Link Jika Belum Dibuka</label>
+            <select id="ttl-select">
+              <option value="60">1 Jam</option>
+              <option value="360">6 Jam</option>
+              <option value="1440" selected>24 Jam (1 Hari)</option>
+              <option value="4320">3 Hari</option>
+              <option value="10080">7 Hari</option>
+            </select>
+            <small class="option-hint">Link otomatis hangus jika tidak dibuka penerima hingga batas waktu ini.</small>
+          </div>
         </div>
 
         <div class="security-features-bar">
@@ -271,7 +327,7 @@
           </div>
           <div class="sec-item">
             <span class="sec-icon">🔐</span>
-            <span>Enkripsi AES-256 di Browser</span>
+            <span>Enkripsi AES-256 + PIN Ganda</span>
           </div>
           <div class="sec-item">
             <span class="sec-icon">🛡️</span>
@@ -287,6 +343,22 @@
           <span>Buat Link Pesan Rahasia</span>
         </button>
       </form>
+
+      <!-- Riwayat Link Pesan Saya & Notifikasi Dibuka (Live Read Receipt) -->
+      <div id="my-messages-section" class="my-messages-section">
+        <div class="my-messages-header">
+          <div>
+            <h3>🕵️ Status Link Pesan Saya (Live Read-Receipt)</h3>
+            <p>Pantau apakah link yang Anda kirim sudah dibuka penerima atau batalkan sebelum dibuka.</p>
+          </div>
+          <button type="button" id="user-push-btn" class="btn-push-mini">
+            🔔 Notif HP Saat Dibuka
+          </button>
+        </div>
+        <div id="my-messages-list" class="my-messages-list">
+          <div class="my-msg-empty">Belum ada riwayat link pesan yang Anda buat.</div>
+        </div>
+      </div>
     </main>
 
     <!-- ==========================================
@@ -309,6 +381,12 @@
             <span id="copy-btn-text">Salin Link</span>
           </button>
         </div>
+
+        <div id="share-pin-reminder" class="share-pin-reminder hidden">
+          <span>🔑 <strong>Dilindungi PIN Penerima:</strong> <code id="share-pin-code">-</code></span>
+          <small>Beritahukan PIN ini kepada penerima agar mereka dapat membuka pesan Anda.</small>
+        </div>
+
         <p class="warning-note">
           ⚠️ <strong>Penting:</strong> Kunci dekripsi ada di bagian akhir link (setelah tanda <code>#</code>) dan tidak pernah disimpan di server.
         </p>
@@ -351,14 +429,26 @@
           </svg>
         </div>
         <h1>Anda Menerima Pesan Rahasia</h1>
-        <p class="gate-subtitle">
+        <p class="gate-subtitle" id="gate-subtitle-text">
           Pesan ini dilindungi enkripsi End-to-End dan <strong>hanya bisa dibuka satu kali saja</strong>.
         </p>
+
+        <!-- Kotak Input PIN Jika Pesan Dilindungi PIN oleh Pengirim -->
+        <div id="gate-pin-box" class="gate-pin-box hidden">
+          <label for="gate-pin-input">🔑 Masukkan PIN Rahasia dari Pengirim</label>
+          <input
+            type="password"
+            id="gate-pin-input"
+            placeholder="Ketik PIN untuk membuka pesan..."
+            autocomplete="off"
+          />
+          <small id="gate-pin-hint" class="gate-pin-hint">Pesan tidak akan hancur sebelum PIN yang dimasukkan benar (maksimal 5x percobaan).</small>
+        </div>
 
         <div class="rules-card">
           <h3>⚠️ Peraturan Keamanan Sekali Baca:</h3>
           <ul>
-            <li>Begitu tombol di bawah diklik, pesan <strong>langsung dihapus permanen dari server</strong> dan link ini tidak akan bisa dibuka lagi untuk kedua kalinya.</li>
+            <li>Begitu dibuka, pesan <strong>langsung dihapus permanen dari server</strong> dan link ini tidak akan bisa dibuka lagi untuk kedua kalinya.</li>
             <li>Dilengkapi <strong>Proteksi Anti-Screenshot</strong> (Spotlight / Tahan Layar & Auto-Blur saat pindah aplikasi/tab).</li>
             <li>Pastikan tidak ada orang lain yang mengintip layar Anda saat ini.</li>
           </ul>
@@ -458,7 +548,7 @@
     (() => {
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+          navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch(() => {});
         });
       }
 

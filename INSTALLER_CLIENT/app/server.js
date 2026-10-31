@@ -31,9 +31,12 @@ import {
   getUserBySessionToken,
   logoutSessionToken,
   updateUserLicenseInDb,
+  resetUserTrialQuota,
   createSecretMessage,
   getSecretMessageMeta,
   consumeSecretMessage,
+  getUserMessageLogs,
+  userRevokeSecretMessage,
   getAdminDashboardData,
   deleteUserById,
   adminForceDestroyMessage,
@@ -41,7 +44,10 @@ import {
   getStorageEngineName,
   saveAdminPushSubscription,
   removeAdminPushSubscription,
-  getAllAdminPushSubscriptions
+  getAllAdminPushSubscriptions,
+  saveUserPushSubscription,
+  getUserPushSubscriptionsByEmail,
+  removeUserPushSubscription
 } from './src/db.js';
 
 import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML } from './src/license.js';
@@ -50,10 +56,51 @@ import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src
 const PORT = Number(process.env.PORT) || 3006;
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '').replace(/[^0-9]/g, '');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 // Token sesi admin aktif di memori
 const adminTokens = new Set();
+
+// Proteksi Brute-Force Login Admin & Rate Limiting
+const adminLoginAttempts = new Map();
+const messageCreateRateMap = new Map();
+
+function checkAdminLoginRateLimit(ip) {
+  const now = Date.now();
+  const entry = adminLoginAttempts.get(ip);
+  if (!entry) return { allowed: true };
+  if (now - entry.firstAt > 10 * 60 * 1000) {
+    adminLoginAttempts.delete(ip);
+    return { allowed: true };
+  }
+  if (entry.count >= 5) {
+    const waitSec = Math.ceil((10 * 60 * 1000 - (now - entry.firstAt)) / 1000);
+    return { allowed: false, waitSec };
+  }
+  return { allowed: true };
+}
+
+function recordAdminLoginFailure(ip) {
+  const now = Date.now();
+  const entry = adminLoginAttempts.get(ip);
+  if (!entry || now - entry.firstAt > 10 * 60 * 1000) {
+    adminLoginAttempts.set(ip, { count: 1, firstAt: now });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function checkMessageRateLimit(ip) {
+  const now = Date.now();
+  const entry = messageCreateRateMap.get(ip);
+  if (!entry || now - entry.windowStart > 60 * 1000) {
+    messageCreateRateMap.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= 25;
+}
 
 // Pembersihan otomatis pesan yang sudah kedaluwarsa di PostgreSQL setiap 60 detik
 setInterval(() => {
@@ -108,6 +155,38 @@ async function broadcastWebPushToAdmins(payloadObj) {
   }
 }
 
+async function notifySenderMessageOpened(senderEmail, messageId, openerUserAgent = '') {
+  if (!senderEmail) return;
+  try {
+    const subs = await getUserPushSubscriptionsByEmail(senderEmail);
+    if (!subs.length) return;
+
+    let dev = 'Perangkat Penerima';
+    if (openerUserAgent.includes('iPhone') || openerUserAgent.includes('iPad')) dev = 'iPhone/iPad';
+    else if (openerUserAgent.includes('Android')) dev = 'HP Android';
+    else if (openerUserAgent.includes('Mac')) dev = 'Mac';
+    else if (openerUserAgent.includes('Windows')) dev = 'Windows PC';
+
+    const payload = {
+      title: `🔥 Pesan #${messageId} Telah Dibuka!`,
+      body: `Pesan rahasia Anda baru saja dibuka dari ${dev} dan telah dihancurkan permanen dari server.`,
+      url: '/',
+      tag: `opened-${messageId}`
+    };
+
+    await Promise.all(
+      subs.map(async (sub) => {
+        const res = await sendWebPushNotification(sub, payload);
+        if (res.expired) {
+          await removeUserPushSubscription(sub.endpoint);
+        }
+      })
+    );
+  } catch {
+    // Abaikan jika gagal kirim push ke pengirim
+  }
+}
+
 function getClientIp(req) {
   const cfIp = req.headers['cf-connecting-ip'];
   if (cfIp) return String(cfIp).trim();
@@ -142,7 +221,7 @@ function parseJsonBody(req, maxBytes = 64 * 1024) {
     req.on('data', (chunk) => {
       received += chunk.length;
       if (received > maxBytes) {
-        reject(new Error('Payload terlalu besar (maksimal 64KB).'));
+        reject(new Error('Ukuran pesan atau lampiran gambar terlalu besar.'));
         req.destroy();
         return;
       }
@@ -202,7 +281,6 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, getLicenseStatus());
     }
 
-    // 0b. Middleware Pengunci Lisensi VOC ML
     const licenseStatus = getLicenseStatus();
     if (!licenseStatus.allowed) {
       setSecurityHeaders(res);
@@ -211,12 +289,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ========================================================================
-    // 1. AUTENTIKASI LOGIN GMAIL PENGGUNA
+    // 1. AUTENTIKASI LOGIN GMAIL PENGGUNA & KONFIGURASI PUBLIK
     // ========================================================================
 
     if (req.method === 'GET' && pathname === '/api/auth/config') {
+      const { publicKey } = getVapidKeys();
       return sendJson(res, 200, {
-        googleClientId: process.env.GOOGLE_CLIENT_ID || ''
+        googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+        adminWhatsapp: ADMIN_WHATSAPP,
+        vapidPublicKey: publicKey
       });
     }
 
@@ -249,7 +330,6 @@ const server = http.createServer(async (req, res) => {
       let picture = '';
       let provider = 'gmail';
 
-      // Jika login via Google Identity Services (JWT credential)
       if (body.credential) {
         const payload = decodeJwtPayload(body.credential);
         if (!payload || !payload.email) {
@@ -299,7 +379,6 @@ const server = http.createServer(async (req, res) => {
         expiresAt: license.expiresAt
       });
 
-      // Jika pendaftar Gmail baru pertama kali masuk, langsung kirim Web Push Notification ke HP Admin!
       if (session.isNewUser) {
         broadcastWebPushToAdmins({
           title: '🆕 Pendaftar Baru PesanRahasia!',
@@ -326,11 +405,68 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
+    // Subscription Web Push Pengirim (Notifikasi Saat Pesan Dibuka / Read Receipt)
+    if (req.method === 'POST' && pathname === '/api/user/push/subscribe') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+      const ok = await saveUserPushSubscription(
+        user.email,
+        body.subscription,
+        String(req.headers['user-agent'] || 'Sender Device')
+      );
+      if (!ok) {
+        return sendJson(res, 400, { error: 'Subscription Web Push tidak valid.' });
+      }
+      return sendJson(res, 200, { success: true });
+    }
+
+    // Riwayat Link Pesan Milik Pengirim Sendiri & Batalkan Link
+    if (req.method === 'GET' && pathname === '/api/my-messages') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      const logs = await getUserMessageLogs(user.email);
+      return sendJson(res, 200, { logs });
+    }
+
+    const userRevokeMatch = pathname.match(/^\/api\/my-messages\/([A-Za-z0-9_-]+)$/);
+    if (req.method === 'DELETE' && userRevokeMatch) {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      const revoked = await userRevokeSecretMessage(userRevokeMatch[1], user.email);
+      if (!revoked) {
+        return sendJson(res, 404, { error: 'Pesan sudah dibuka atau tidak ditemukan.' });
+      }
+      return sendJson(res, 200, { success: true });
+    }
+
     // ========================================================================
     // 2. API DASHBOARD ADMIN (/admin & /api/admin/*)
     // ========================================================================
 
     if (req.method === 'POST' && pathname === '/api/admin/login') {
+      const clientIp = getClientIp(req);
+      const rateCheck = checkAdminLoginRateLimit(clientIp);
+      if (!rateCheck.allowed) {
+        return sendJson(res, 429, {
+          error: `Terlalu banyak percobaan login gagal. Silakan tunggu ${rateCheck.waitSec} detik.`
+        });
+      }
+
       let body;
       try {
         body = await parseJsonBody(req);
@@ -339,9 +475,11 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (body.password !== ADMIN_PASSWORD) {
+        recordAdminLoginFailure(clientIp);
         return sendJson(res, 401, { error: 'Password Admin salah.' });
       }
 
+      adminLoginAttempts.delete(clientIp);
       const token = crypto.randomBytes(24).toString('hex');
       adminTokens.add(token);
       return sendJson(res, 200, { token });
@@ -396,6 +534,25 @@ const server = http.createServer(async (req, res) => {
       const updatedData = await getAdminDashboardData();
       return sendJson(res, 200, {
         syncedCount: targetUsers.length,
+        ...updatedData
+      });
+    }
+
+    // Endpoint Reset Kuota Trial 10x Gratis Pengguna oleh Admin
+    const adminResetTrialMatch = pathname.match(/^\/api\/admin\/users\/(\d+)\/reset-trial$/);
+    if (req.method === 'POST' && adminResetTrialMatch) {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      const resetUser = await resetUserTrialQuota(Number(adminResetTrialMatch[1]));
+      if (!resetUser) {
+        return sendJson(res, 404, { error: 'Pengguna tidak ditemukan.' });
+      }
+      const updatedData = await getAdminDashboardData();
+      return sendJson(res, 200, {
+        success: true,
+        resetUser,
         ...updatedData
       });
     }
@@ -455,7 +612,6 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'Data subscription Web Push tidak valid.' });
       }
 
-      // Kirim notifikasi sambutan langsung ke HP/perangkat Admin yang baru diaktifkan
       await sendWebPushNotification(body.subscription, {
         title: '🔔 Web Push Admin Aktif!',
         body: 'Perangkat ini sekarang akan menerima notifikasi otomatis setiap ada pendaftar Gmail baru.',
@@ -490,6 +646,13 @@ const server = http.createServer(async (req, res) => {
     // ========================================================================
 
     if (req.method === 'POST' && pathname === '/api/messages') {
+      const senderIp = getClientIp(req);
+      if (!checkMessageRateLimit(senderIp)) {
+        return sendJson(res, 429, {
+          error: 'Terlalu banyak permintaan pembuatan pesan. Silakan tunggu 1 menit.'
+        });
+      }
+
       const token = getBearerToken(req);
       const user = await getUserBySessionToken(token);
       if (!user) {
@@ -508,19 +671,32 @@ const server = http.createServer(async (req, res) => {
 
       let body;
       try {
-        body = await parseJsonBody(req);
+        body = await parseJsonBody(req, 2560 * 1024); // Maks 2.5MB untuk mendukung lampiran gambar terenkripsi
       } catch (err) {
         return sendJson(res, 400, { error: err.message });
       }
 
-      const { ciphertext, iv, ttlMinutes = 1440, protectionMode = 'spotlight', viewTimerSeconds = 60 } = body;
+      const {
+        ciphertext,
+        iv,
+        pin = '',
+        hasImage = false,
+        ttlMinutes = 1440,
+        protectionMode = 'spotlight',
+        viewTimerSeconds = 60
+      } = body;
 
       if (!ciphertext || typeof ciphertext !== 'string' || !iv || typeof iv !== 'string') {
         return sendJson(res, 400, { error: 'Data enkripsi (ciphertext & iv) wajib diisi.' });
       }
 
-      if (ciphertext.length > 32000) {
-        return sendJson(res, 400, { error: 'Pesan terlalu panjang.' });
+      if (ciphertext.length > 2200000) {
+        return sendJson(res, 400, { error: 'Ukuran pesan / lampiran gambar terlalu besar.' });
+      }
+
+      const cleanPin = String(pin || '').trim();
+      if (cleanPin && (cleanPin.length < 4 || cleanPin.length > 16)) {
+        return sendJson(res, 400, { error: 'PIN Proteksi harus terdiri dari 4 hingga 16 karakter.' });
       }
 
       const validTtl = Math.min(Math.max(Number(ttlMinutes) || 1440, 5), 10080);
@@ -530,7 +706,6 @@ const server = http.createServer(async (req, res) => {
       const id = generateShortId();
       const now = Date.now();
       const expiresAt = now + validTtl * 60 * 1000;
-      const senderIp = getClientIp(req);
 
       await createSecretMessage({
         id,
@@ -538,6 +713,8 @@ const server = http.createServer(async (req, res) => {
         senderIp,
         ciphertext,
         iv,
+        pin: cleanPin,
+        hasImage: Boolean(hasImage),
         protectionMode: validMode,
         viewTimerSeconds: validTimer,
         expiresAt
@@ -567,6 +744,8 @@ const server = http.createServer(async (req, res) => {
         id,
         publicBaseUrl: PUBLIC_BASE_URL,
         expiresAt,
+        hasPin: Boolean(cleanPin),
+        hasImage: Boolean(hasImage),
         protectionMode: validMode,
         viewTimerSeconds: validTimer,
         storage: getStorageEngineName(),
@@ -590,30 +769,65 @@ const server = http.createServer(async (req, res) => {
 
       return sendJson(res, 200, {
         exists: true,
+        hasPin: Boolean(record.hasPin),
+        hasImage: Boolean(record.hasImage),
         protectionMode: record.protectionMode,
         viewTimerSeconds: record.viewTimerSeconds,
         expiresAt: Number(record.expiresAt)
       });
     }
 
-    // Ambil pesan & LANGSUNG HAPUS PERMANEN dari PostgreSQL secara atomik!
+    // Verifikasi PIN (jika ada) & LANGSUNG HAPUS PERMANEN dari PostgreSQL secara atomik!
     const consumeMatch = pathname.match(/^\/api\/messages\/([A-Za-z0-9_-]+)\/consume$/);
     if (req.method === 'POST' && consumeMatch) {
       const id = consumeMatch[1];
       const openerIp = getClientIp(req);
       const openerUserAgent = String(req.headers['user-agent'] || 'Unknown');
 
-      const record = await consumeSecretMessage(id, { openerIp, openerUserAgent });
+      let body = {};
+      try {
+        body = await parseJsonBody(req);
+      } catch {
+        body = {};
+      }
 
-      if (!record) {
+      const result = await consumeSecretMessage(id, {
+        pin: body.pin || '',
+        openerIp,
+        openerUserAgent
+      });
+
+      if (result.status === 'invalid_pin') {
+        return sendJson(res, 403, {
+          error: `PIN Rahasia salah! Sisa percobaan: ${result.attemptsLeft}x sebelum pesan otomatis dihancurkan.`,
+          invalidPin: true,
+          attemptsLeft: result.attemptsLeft
+        });
+      }
+
+      if (result.status === 'pin_burned') {
+        return sendJson(res, 410, {
+          error: 'Salah memasukkan PIN 5 kali! Demi keamanan, pesan rahasia telah dihancurkan secara permanen.'
+        });
+      }
+
+      if (!result.record) {
         return sendJson(res, 404, {
           error: 'Pesan rahasia tidak ditemukan atau sudah dihancurkan sebelumnya.'
         });
       }
 
+      const record = result.record;
+
+      // Kirim Web Push Notification Read-Receipt ke HP Pengirim!
+      if (record.senderEmail) {
+        notifySenderMessageOpened(record.senderEmail, id, openerUserAgent);
+      }
+
       return sendJson(res, 200, {
         ciphertext: record.ciphertext,
         iv: record.iv,
+        hasImage: Boolean(record.hasImage),
         protectionMode: record.protectionMode,
         viewTimerSeconds: record.viewTimerSeconds,
         destroyedAt: Date.now()
