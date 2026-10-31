@@ -27,9 +27,13 @@ const __dirname = path.dirname(__filename);
 
 import {
   initDatabase,
+  loginOrRegisterGmailUser,
+  getUserBySessionToken,
+  logoutSessionToken,
   createSecretMessage,
   getSecretMessageMeta,
   consumeSecretMessage,
+  getAdminDashboardData,
   cleanupExpiredMessages,
   getStorageEngineName
 } from './src/db.js';
@@ -38,7 +42,11 @@ import { getLicenseStatus, renderLockedScreenHTML } from './src/license.js';
 
 const PORT = Number(process.env.PORT) || 3006;
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+
+// Token sesi admin aktif di memori
+const adminTokens = new Set();
 
 // Pembersihan otomatis pesan yang sudah kedaluwarsa di PostgreSQL setiap 60 detik
 setInterval(() => {
@@ -68,6 +76,32 @@ function sendJson(res, statusCode, data) {
   setSecurityHeaders(res);
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
+}
+
+function getClientIp(req) {
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (cfIp) return String(cfIp).trim();
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+function getBearerToken(req) {
+  const auth = req.headers['authorization'] || '';
+  if (auth.startsWith('Bearer ')) {
+    return auth.slice(7).trim();
+  }
+  return '';
+}
+
+function decodeJwtPayload(jwtStr) {
+  try {
+    const parts = String(jwtStr).split('.');
+    if (parts.length < 2) return null;
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function parseJsonBody(req, maxBytes = 64 * 1024) {
@@ -125,7 +159,7 @@ const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
 
-    // 0. Healthcheck & Status Lisensi VOC ML (selalu dapat diakses oleh Docker healthcheck)
+    // 0. Healthcheck & Status Lisensi VOC ML
     if (req.method === 'GET' && pathname === '/api/health') {
       return sendJson(res, 200, {
         status: 'ok',
@@ -146,8 +180,137 @@ const server = http.createServer(async (req, res) => {
       return res.end(renderLockedScreenHTML(licenseStatus));
     }
 
-    // 1. POST /api/messages -> Simpan pesan terenkripsi baru ke PostgreSQL
+    // ========================================================================
+    // 1. AUTENTIKASI LOGIN GMAIL PENGGUNA
+    // ========================================================================
+
+    if (req.method === 'GET' && pathname === '/api/auth/config') {
+      return sendJson(res, 200, {
+        googleClientId: process.env.GOOGLE_CLIENT_ID || ''
+      });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/auth/me') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { authenticated: false });
+      }
+      return sendJson(res, 200, { authenticated: true, user });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/google') {
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+
+      let email = '';
+      let name = '';
+      let picture = '';
+      let provider = 'gmail';
+
+      // Jika login via Google Identity Services (JWT credential)
+      if (body.credential) {
+        const payload = decodeJwtPayload(body.credential);
+        if (!payload || !payload.email) {
+          return sendJson(res, 400, { error: 'Token Google Sign-In tidak valid.' });
+        }
+        email = String(payload.email).trim().toLowerCase();
+        name = String(payload.name || email.split('@')[0]).trim();
+        picture = String(payload.picture || '');
+        provider = 'google-oauth';
+      } else {
+        email = String(body.email || '').trim().toLowerCase();
+        name = String(body.name || '').trim();
+        picture = String(body.picture || '').trim();
+      }
+
+      if (!email || !/^[a-z0-9._%+-]+@gmail\.com$/i.test(email)) {
+        return sendJson(res, 400, {
+          error: 'Wajib menggunakan alamat email @gmail.com yang valid (contoh: namaanda@gmail.com).'
+        });
+      }
+
+      if (!name || name.length < 2) {
+        name = email.split('@')[0];
+      }
+
+      if (!picture) {
+        picture = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=04130d&bold=true`;
+      }
+
+      const ip = getClientIp(req);
+      const userAgent = String(req.headers['user-agent'] || 'Unknown');
+
+      const session = await loginOrRegisterGmailUser({
+        email,
+        name,
+        picture,
+        ip,
+        userAgent,
+        provider
+      });
+
+      return sendJson(res, 200, {
+        authenticated: true,
+        user: session.user,
+        token: session.token
+      });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/logout') {
+      const token = getBearerToken(req);
+      await logoutSessionToken(token);
+      return sendJson(res, 200, { success: true });
+    }
+
+    // ========================================================================
+    // 2. API DASHBOARD ADMIN (/admin & /api/admin/*)
+    // ========================================================================
+
+    if (req.method === 'POST' && pathname === '/api/admin/login') {
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+
+      if (body.password !== ADMIN_PASSWORD) {
+        return sendJson(res, 401, { error: 'Password Admin salah.' });
+      }
+
+      const token = crypto.randomBytes(24).toString('hex');
+      adminTokens.add(token);
+      return sendJson(res, 200, { token });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/dashboard') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid. Silakan login kembali.' });
+      }
+
+      const dashboardData = await getAdminDashboardData();
+      return sendJson(res, 200, dashboardData);
+    }
+
+    // ========================================================================
+    // 3. API PESAN RAHASIA (WAJIB LOGIN GMAIL UNTUK PENGIRIM)
+    // ========================================================================
+
     if (req.method === 'POST' && pathname === '/api/messages') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, {
+          error: 'Silakan login dengan akun Gmail Anda terlebih dahulu untuk membuat pesan rahasia.'
+        });
+      }
+
       let body;
       try {
         body = await parseJsonBody(req);
@@ -165,16 +328,19 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'Pesan terlalu panjang.' });
       }
 
-      const validTtl = Math.min(Math.max(Number(ttlMinutes) || 1440, 5), 10080); // 5 menit s/d 7 hari
-      const validTimer = Math.min(Math.max(Number(viewTimerSeconds) || 60, 15), 300); // 15 detik s/d 5 menit
+      const validTtl = Math.min(Math.max(Number(ttlMinutes) || 1440, 5), 10080);
+      const validTimer = Math.min(Math.max(Number(viewTimerSeconds) || 60, 15), 300);
       const validMode = ['spotlight', 'hold', 'blur'].includes(protectionMode) ? protectionMode : 'spotlight';
 
       const id = generateShortId();
       const now = Date.now();
       const expiresAt = now + validTtl * 60 * 1000;
+      const senderIp = getClientIp(req);
 
       await createSecretMessage({
         id,
+        user,
+        senderIp,
         ciphertext,
         iv,
         protectionMode: validMode,
@@ -192,7 +358,7 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 2. GET /api/messages/:id/meta -> Cek apakah pesan masih ada di PostgreSQL (tanpa menghancurkannya)
+    // Cek apakah pesan masih ada di PostgreSQL (tanpa menghancurkannya)
     const metaMatch = pathname.match(/^\/api\/messages\/([A-Za-z0-9_-]+)\/meta$/);
     if (req.method === 'GET' && metaMatch) {
       const id = metaMatch[1];
@@ -213,11 +379,14 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 3. POST /api/messages/:id/consume -> Ambil pesan & LANGSUNG HAPUS PERMANEN dari PostgreSQL secara atomik!
+    // Ambil pesan & LANGSUNG HAPUS PERMANEN dari PostgreSQL secara atomik!
     const consumeMatch = pathname.match(/^\/api\/messages\/([A-Za-z0-9_-]+)\/consume$/);
     if (req.method === 'POST' && consumeMatch) {
       const id = consumeMatch[1];
-      const record = await consumeSecretMessage(id);
+      const openerIp = getClientIp(req);
+      const openerUserAgent = String(req.headers['user-agent'] || 'Unknown');
+
+      const record = await consumeSecretMessage(id, { openerIp, openerUserAgent });
 
       if (!record) {
         return sendJson(res, 404, {
@@ -234,12 +403,17 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 4. Rute halaman baca pesan: /m/:id -> Sajikan index.html
+    // 4. Rute halaman Admin Dashboard: /admin -> Sajikan admin.html
+    if (req.method === 'GET' && (pathname === '/admin' || pathname === '/admin/')) {
+      return serveStaticFile(res, path.join(PUBLIC_DIR, 'admin.html'));
+    }
+
+    // 5. Rute halaman baca pesan: /m/:id -> Sajikan index.html
     if (req.method === 'GET' && /^\/m\/[A-Za-z0-9_-]+$/.test(pathname)) {
       return serveStaticFile(res, path.join(PUBLIC_DIR, 'index.html'));
     }
 
-    // 5. Rute file statis di folder public/
+    // 6. Rute file statis di folder public/
     if (req.method === 'GET') {
       let safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
       if (safePath === '/' || safePath === '\\') {
@@ -263,6 +437,7 @@ const server = http.createServer(async (req, res) => {
   server.listen(PORT, () => {
     console.log(`\n=============================================================`);
     console.log(`🔒 Server Lokal PesanRahasia  : http://localhost:${PORT}`);
+    console.log(`📊 Dashboard Admin Pengguna   : http://localhost:${PORT}/admin`);
     console.log(`🌐 Domain Publik (Cloudflare) : ${PUBLIC_BASE_URL}`);
     console.log(`🗄️  Engine Database           : ${getStorageEngineName()}`);
     console.log(`=============================================================\n`);

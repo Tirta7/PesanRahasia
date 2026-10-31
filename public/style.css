@@ -37,7 +37,9 @@
 
 /* Izinkan seleksi hanya pada input pembuatan pesan dan kotak salin link */
 textarea#secret-input,
-input#generated-link {
+input#generated-link,
+input#login-name,
+input#login-email {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -236,7 +238,9 @@ label {
 
 textarea,
 select,
-input[type="text"] {
+input[type="text"],
+input[type="email"],
+input[type="password"] {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
@@ -255,7 +259,9 @@ textarea {
 
 textarea:focus,
 select:focus,
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--primary-glow);
@@ -777,6 +783,134 @@ input[type="text"]:focus {
   text-align: center;
   font-size: 0.78rem;
   color: var(--text-dim);
+}
+
+.footer-admin-link {
+  color: #34d399;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-admin-link:hover {
+  text-decoration: underline;
+}
+
+/* Header User Profile & Login Gmail */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-profile-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 5px 8px 5px 6px;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.user-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.user-email {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.btn-logout-mini {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.btn-logout-mini:hover {
+  background: rgba(239, 68, 68, 0.28);
+}
+
+.login-hero {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.google-badge-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.login-hero h1 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.login-hero p {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.google-oauth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.divider-text {
+  width: 100%;
+  text-align: center;
+  border-bottom: 1px solid var(--border-subtle);
+  line-height: 0.1em;
+  margin: 18px 0 8px;
+}
+
+.divider-text span {
+  background: #101520;
+  padding: 0 12px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.btn-google {
+  background: #ffffff;
+  color: #111827;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.btn-google:hover {
+  background: #f3f4f6;
 }
 
 .toast {

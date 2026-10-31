@@ -5,3 +5,4 @@ ingress:
   - hostname: privatmassage.vocpos.id
     service: http://app:3006
   - service: http_status:404
+

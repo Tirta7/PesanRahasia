@@ -6,5 +6,8 @@ data/
 pgdata/
 INSTALLER_CLIENT/data/
 INSTALLER_CLIENT/pgdata/
+cloudflared/credentials.json
+cloudflared/config-local.yml
+INSTALLER_CLIENT/cloudflared/credentials.json
 *.log
 

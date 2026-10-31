@@ -1,12 +1,29 @@
 (() => {
   'use strict';
 
+  const SESSION_STORAGE_KEY = 'pr_session_token';
+
   // Elemen DOM Utama
+  const loginView = document.getElementById('login-view');
   const createView = document.getElementById('create-view');
   const shareView = document.getElementById('share-view');
   const gateView = document.getElementById('gate-view');
   const secretView = document.getElementById('secret-view');
   const destroyedView = document.getElementById('destroyed-view');
+
+  const userProfilePill = document.getElementById('user-profile-pill');
+  const vaultPill = document.getElementById('vault-pill');
+  const userAvatar = document.getElementById('user-avatar');
+  const userNameDisplay = document.getElementById('user-name-display');
+  const userEmailDisplay = document.getElementById('user-email-display');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  const gmailLoginForm = document.getElementById('gmail-login-form');
+  const loginNameInput = document.getElementById('login-name');
+  const loginEmailInput = document.getElementById('login-email');
+  const gmailLoginBtn = document.getElementById('gmail-login-btn');
+  const googleOauthContainer = document.getElementById('google-oauth-container');
+  const googleSigninBtn = document.getElementById('google-signin-btn');
 
   const createForm = document.getElementById('create-form');
   const secretInput = document.getElementById('secret-input');
@@ -45,6 +62,27 @@
   let activeMode = 'spotlight';
   let countdownInterval = null;
   let isMessageActive = false;
+  let currentUser = null;
+
+  function getSessionToken() {
+    try {
+      return localStorage.getItem(SESSION_STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function setSessionToken(token) {
+    try {
+      if (token) {
+        localStorage.setItem(SESSION_STORAGE_KEY, token);
+      } else {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // Abaikan jika storage diblokir
+    }
+  }
 
   // ============================================================================
   // 1. UTILITAS ENKRIPSI END-TO-END (AES-256-GCM + Fallback untuk Non-HTTPS LAN)
@@ -71,7 +109,6 @@
     return bytes;
   }
 
-  // PRNG stream cipher fallback jika dibuka lewat IP lokal HTTP biasa di HP (di mana crypto.subtle dibatasi browser)
   function xorStreamCipher(dataBytes, keyBytes, ivBytes) {
     const out = new Uint8Array(dataBytes.length);
     let s0 = 0x9e3779b9;
@@ -119,7 +156,6 @@
       };
     }
 
-    // Fallback untuk koneksi HTTP LAN non-localhost
     const cipherBytes = xorStreamCipher(data, keyBytes, ivBytes);
     return {
       ciphertext: 'fb.' + bytesToBase64Url(cipherBytes),
@@ -160,14 +196,14 @@
   }
 
   // ============================================================================
-  // 2. UI NAVIGATION & TOAST
+  // 2. UI NAVIGATION, TOAST & GMAIL AUTHENTICATION
   // ============================================================================
 
   function showView(viewElement) {
-    [createView, shareView, gateView, secretView, destroyedView].forEach((el) => {
-      el.classList.add('hidden');
+    [loginView, createView, shareView, gateView, secretView, destroyedView].forEach((el) => {
+      if (el) el.classList.add('hidden');
     });
-    viewElement.classList.remove('hidden');
+    if (viewElement) viewElement.classList.remove('hidden');
   }
 
   let toastTimeout = null;
@@ -178,6 +214,103 @@
     toastTimeout = setTimeout(() => {
       toastEl.classList.add('hidden');
     }, 3200);
+  }
+
+  function updateUserHeader(user) {
+    currentUser = user;
+    if (user && user.email) {
+      userNameDisplay.textContent = user.name || user.email.split('@')[0];
+      userEmailDisplay.textContent = user.email;
+      userAvatar.src =
+        user.picture ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email)}&background=10b981&color=04130d&bold=true`;
+      userProfilePill.classList.remove('hidden');
+      vaultPill.classList.add('hidden');
+    } else {
+      userProfilePill.classList.add('hidden');
+      vaultPill.classList.remove('hidden');
+    }
+  }
+
+  async function initGoogleOAuthIfConfigured() {
+    try {
+      const res = await fetch('/api/auth/config');
+      const cfg = await res.json();
+      if (cfg.googleClientId && window.google && window.google.accounts) {
+        googleOauthContainer.classList.remove('hidden');
+        window.google.accounts.id.initialize({
+          client_id: cfg.googleClientId,
+          callback: async (response) => {
+            if (response.credential) {
+              await handleGoogleLoginRequest({ credential: response.credential });
+            }
+          }
+        });
+        window.google.accounts.id.renderButton(googleSigninBtn, {
+          theme: 'filled_black',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          width: 320
+        });
+      }
+    } catch {
+      // Gunakan form Gmail langsung jika Google Client ID belum diisi
+    }
+  }
+
+  async function handleGoogleLoginRequest(payload) {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal masuk dengan akun Gmail.');
+      }
+
+      setSessionToken(data.token);
+      updateUserHeader(data.user);
+      showView(createView);
+      showToast(`👋 Selamat datang, ${data.user.name}!`);
+    } catch (err) {
+      showToast('❌ ' + (err.message || 'Gagal login dengan Gmail.'));
+    }
+  }
+
+  if (gmailLoginForm) {
+    gmailLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = loginNameInput.value.trim();
+      const email = loginEmailInput.value.trim().toLowerCase();
+
+      if (!/^[a-z0-9._%+-]+@gmail\.com$/i.test(email)) {
+        showToast('⚠️ Harap gunakan alamat email berakhiran @gmail.com');
+        return;
+      }
+
+      gmailLoginBtn.disabled = true;
+      await handleGoogleLoginRequest({ name, email });
+      gmailLoginBtn.disabled = false;
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      const token = getSessionToken();
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => {});
+      }
+      setSessionToken('');
+      updateUserHeader(null);
+      showView(loginView);
+      showToast('Anda telah keluar dari akun Gmail.');
+    });
   }
 
   // ============================================================================
@@ -200,6 +333,13 @@
         return;
       }
 
+      const token = getSessionToken();
+      if (!token) {
+        showToast('Silakan masuk dengan akun Gmail terlebih dahulu.');
+        showView(loginView);
+        return;
+      }
+
       generateBtn.disabled = true;
       const originalBtnHtml = generateBtn.innerHTML;
       generateBtn.innerHTML = '<span>🔐 Mengenkripsi & Membuat Link...</span>';
@@ -211,7 +351,10 @@
 
         const res = await fetch('/api/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
           body: JSON.stringify({
             ciphertext: encrypted.ciphertext,
             iv: encrypted.iv,
@@ -221,24 +364,27 @@
         });
 
         const data = await res.json();
+        if (res.status === 401) {
+          setSessionToken('');
+          updateUserHeader(null);
+          showView(loginView);
+          throw new Error('Sesi login Gmail telah habis, silakan masuk kembali.');
+        }
+
         if (!res.ok) {
           throw new Error(data.error || 'Gagal menyimpan pesan rahasia.');
         }
 
-        // Bangun URL Rahasia menggunakan domain publik Cloudflare Tunnel (https://privatmassage.vocpos.id)
-        // dengan #key di fragment (tidak pernah dikirim ke server)
         const baseUrl = (data.publicBaseUrl || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
         const secretUrl = `${baseUrl}/m/${data.id}#${encrypted.key}`;
         generatedLinkInput.value = secretUrl;
 
-        // Siapkan pesan share WhatsApp
         const waMessage =
           `🔒 *Pesan Rahasia Sekali Baca*\n\n` +
           `Saya mengirimkan pesan rahasia untuk Anda. Pesan ini hanya bisa dibuka *SATU KALI* dan akan otomatis hancur selamanya setelah Anda membukanya:\n\n` +
           `${secretUrl}`;
         whatsappShareBtn.href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
 
-        // Bersihkan form input demi keamanan
         secretInput.value = '';
         charCounter.textContent = '0 / 5.000 karakter';
 
@@ -302,25 +448,47 @@
   // 4. ALUR PENERIMA PESAN: CEK, BUKA & LANGSUNG HANCURKAN (RECIPIENT FLOW)
   // ============================================================================
 
-  function checkRoute() {
+  async function checkRoute() {
     const match = window.location.pathname.match(/^\/m\/([A-Za-z0-9_-]+)$/);
-    if (!match) {
-      showView(createView);
+    if (match) {
+      // Penerima pesan di WhatsApp TIDAK perlu login untuk membuka link
+      const messageId = match[1];
+      const keyFromHash = window.location.hash.replace(/^#/, '').trim();
+
+      if (!keyFromHash) {
+        showDestroyedScreen(
+          'Kunci Dekripsi Tidak Lengkap',
+          'Link yang Anda buka tidak memiliki kunci dekripsi (#key) yang valid atau sudah tidak utuh.'
+        );
+        return;
+      }
+
+      verifyMessageExists(messageId, keyFromHash);
       return;
     }
 
-    const messageId = match[1];
-    const keyFromHash = window.location.hash.replace(/^#/, '').trim();
-
-    if (!keyFromHash) {
-      showDestroyedScreen(
-        'Kunci Dekripsi Tidak Lengkap',
-        'Link yang Anda buka tidak memiliki kunci dekripsi (#key) yang valid atau sudah tidak utuh.'
-      );
-      return;
+    // Halaman Pengirim (/): Cek apakah sudah login dengan akun Gmail
+    const token = getSessionToken();
+    if (token) {
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          updateUserHeader(data.user);
+          showView(createView);
+          return;
+        }
+      } catch {
+        // Lanjut ke layar login
+      }
+      setSessionToken('');
     }
 
-    verifyMessageExists(messageId, keyFromHash);
+    updateUserHeader(null);
+    showView(loginView);
+    initGoogleOAuthIfConfigured();
   }
 
   async function verifyMessageExists(messageId, keyFromHash) {
@@ -338,9 +506,7 @@
         return;
       }
 
-      // Pesan masih tersedia -> Tampilkan layar konfirmasi buka pesan
       showView(gateView);
-
       revealConfirmBtn.onclick = () => consumeAndRevealMessage(messageId, keyFromHash);
     } catch {
       showDestroyedScreen(
@@ -369,10 +535,8 @@
         return;
       }
 
-      // Dekripsi pesan di browser menggunakan kunci dari hash URL
       const plaintext = await decryptSecret(data.ciphertext, data.iv, keyFromHash);
 
-      // Hapus hash kunci dari address bar & riwayat agar tidak bisa di-refresh/dibuka ulang
       if (window.history && window.history.replaceState) {
         window.history.replaceState(null, 'Pesan Rahasia Dihancurkan', `/m/${messageId}`);
       }
@@ -457,7 +621,6 @@
     setProtectionMode(initialMode === 'hold' ? 'hold' : 'spotlight');
     showView(secretView);
 
-    // Jalankan hitung mundur pembersihan layar otomatis
     let remaining = timerSeconds;
     countdownTimerEl.textContent = `${remaining}d`;
     clearInterval(countdownInterval);
@@ -479,13 +642,11 @@
     showToast('🔥 Pesan rahasia telah dihancurkan.');
   }
 
-  // Event Listener Mode Switcher
   if (modeSpotlightBtn && modeHoldBtn) {
     modeSpotlightBtn.addEventListener('click', () => setProtectionMode('spotlight'));
     modeHoldBtn.addEventListener('click', () => setProtectionMode('hold'));
   }
 
-  // Spotlight Pointer Events (Mouse & Touch)
   function updateSpotlightPosition(clientX, clientY) {
     if (!isMessageActive || activeMode !== 'spotlight') return;
     const rect = secretStage.getBoundingClientRect();
@@ -513,7 +674,6 @@
         if (activeMode === 'spotlight' && e.touches.length === 1) {
           updateSpotlightPosition(e.touches[0].clientX, e.touches[0].clientY);
         } else if (e.touches.length > 1) {
-          // Multi-touch (misal gesture screenshot 3 jari di HP) -> langsung tutup!
           lockStageShield('Gesture multi-sentuhan terdeteksi. Demi keamanan, pesan disembunyikan.');
         }
       },
@@ -540,7 +700,6 @@
     });
   }
 
-  // Tombol Tahan untuk Baca (Mode Hold)
   function startHolding(e) {
     if (!isMessageActive || activeMode !== 'hold') return;
     if (e.cancelable) e.preventDefault();
@@ -572,7 +731,6 @@
   // 6. SENSOR DETEKSI SCREENSHOT, PINDAH TAB, KLIK KANAN & COPY-PASTE
   // ============================================================================
 
-  // Blokir klik kanan / context menu saat membaca pesan
   document.addEventListener('contextmenu', (e) => {
     if (isMessageActive) {
       e.preventDefault();
@@ -580,7 +738,6 @@
     }
   });
 
-  // Blokir Copy / Cut saat pesan tampil
   ['copy', 'cut', 'dragstart'].forEach((evtName) => {
     document.addEventListener(evtName, (e) => {
       if (isMessageActive) {
@@ -590,7 +747,6 @@
     });
   });
 
-  // Auto-Lock instan ketika jendela kehilangan fokus (misal membuka Snipping Tool / pindah aplikasi / tarik Control Center)
   window.addEventListener('blur', () => {
     if (isMessageActive) {
       lockStageShield('Jendela kehilangan fokus. Pesan otomatis disembunyikan untuk mencegah tangkapan layar.');
@@ -603,7 +759,6 @@
     }
   });
 
-  // Deteksi tombol PrintScreen, Cmd+Shift+3/4/5 (macOS), Win+Shift+S, Ctrl+P, Ctrl+S
   window.addEventListener('keydown', (e) => {
     if (!isMessageActive) return;
 
@@ -633,7 +788,5 @@
     }
   });
 
-  // Jalankan pengecekan rute saat halaman pertama kali dimuat
   checkRoute();
 })();
-

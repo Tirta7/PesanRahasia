@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Admin — Monitoring Pengguna PesanRahasia</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: #101520;
+      --border: rgba(255, 255, 255, 0.09);
+      --primary: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .brand-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: #04130d; }
+    .btn-outline { background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: rgba(239,68,68,0.16); color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
+    .hidden { display: none !important; }
+
+    /* Login Box */
+    .login-card {
+      max-width: 420px;
+      margin: 60px auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .login-card h1 { font-size: 1.35rem; margin-bottom: 8px; }
+    .login-card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
+    .input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #080b12;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.94rem;
+      margin-bottom: 14px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .stat-label { font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: #fff; }
+    .stat-sub { font-size: 0.76rem; color: #6ee7b7; margin-top: 4px; }
+
+    /* Section Card & Table */
+    .section-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 24px;
+    }
+    .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-header h2 { font-size: 1.15rem; }
+    .search-box {
+      padding: 9px 14px;
+      background: #080b12;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.86rem;
+      min-width: 260px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(255,255,255,0.02);
+    }
+    tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar-sm {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+    .badge-destroyed { background: rgba(239,68,68,0.16); color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
+    .badge-pending { background: rgba(245,158,11,0.16); color: #fde68a; border: 1px solid rgba(245,158,11,0.35); }
+    .badge-expired { background: rgba(156,163,175,0.15); color: #9ca3af; }
+    .mono { font-family: monospace; font-size: 0.8rem; color: #d1d5db; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <h2>🔒 PesanRahasia</h2>
+        <span class="brand-badge">Dashboard Admin & Monitoring Pengguna</span>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a href="/" class="btn btn-outline">← Ke Halaman Aplikasi</a>
+        <button id="refresh-btn" class="btn btn-outline hidden">🔄 Refresh Data</button>
+        <button id="admin-logout-btn" class="btn btn-danger hidden">Keluar Admin</button>
+      </div>
+    </header>
+
+    <!-- Login Admin -->
+    <section id="admin-login-section" class="login-card">
+      <h1>🔐 Login Panel Admin</h1>
+      <p>Masukkan password Admin untuk melihat daftar pengguna Gmail dan riwayat aktivitas aplikasi.</p>
+      <form id="admin-login-form">
+        <input type="password" id="admin-password" class="input" placeholder="Password Admin (default: admin123)" required />
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Masuk ke Dashboard</button>
+      </form>
+      <p id="login-error" style="color:#f87171; font-size:0.82rem; margin-top:10px;" class="hidden"></p>
+    </section>
+
+    <!-- Konten Dashboard Admin -->
+    <main id="admin-dashboard-section" class="hidden">
+      <!-- 4 Kartu Statistik -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">👥 Total Pengguna Gmail</div>
+          <div class="stat-value" id="stat-total-users">0</div>
+          <div class="stat-sub">Akun @gmail.com terdaftar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🟢 Pengguna Aktif (24 Jam)</div>
+          <div class="stat-value" id="stat-active-today">0</div>
+          <div class="stat-sub">Login / kirim pesan hari ini</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">📨 Total Link Pesan Dibuat</div>
+          <div class="stat-value" id="stat-total-messages">0</div>
+          <div class="stat-sub" id="stat-pending-sub">0 menunggu dibuka</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔥 Pesan Sudah Dibuka & Hancur</div>
+          <div class="stat-value" id="stat-destroyed-messages">0</div>
+          <div class="stat-sub">Otomatis terhapus permanen</div>
+        </div>
+      </div>
+
+      <!-- Tabel 1: Daftar Semua Pengguna Gmail -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>📋 Daftar Pengguna Aplikasi (Login Gmail)</h2>
+            <p style="font-size:0.82rem; color:var(--muted);">Menampilkan seluruh pengguna yang login menggunakan akun @gmail.com beserta jumlah pesan yang dibuat.</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, atau IP..." />
+            <button id="export-csv-btn" class="btn btn-primary">📥 Export CSV Pengguna</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Pengguna</th>
+                <th>Email Gmail</th>
+                <th>Total Pesan</th>
+                <th>IP Address</th>
+                <th>Perangkat / Browser</th>
+                <th>Pertama Masuk</th>
+                <th>Terakhir Aktif</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="8" style="text-align:center; color:var(--muted);">Memuat data pengguna...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabel 2: Riwayat Aktivitas Link Pesan -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>🕵️ Riwayat Aktivitas Link Pesan Rahasia</h2>
+            <p style="font-size:0.82rem; color:var(--muted);">Memantau siapa yang membuat link dan kapan link tersebut dibuka/dihancurkan (isi pesan tetap terenkripsi E2EE).</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID Link</th>
+                <th>Pengirim (Gmail)</th>
+                <th>Mode Proteksi</th>
+                <th>Status Pesan</th>
+                <th>Waktu Dibuat</th>
+                <th>Waktu Dibuka / Hancur</th>
+                <th>IP Pembuka</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body">
+              <tr><td colspan="7" style="text-align:center; color:var(--muted);">Memuat riwayat aktivitas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const ADMIN_TOKEN_KEY = 'pr_admin_token';
+      const loginSection = document.getElementById('admin-login-section');
+      const dashboardSection = document.getElementById('admin-dashboard-section');
+      const loginForm = document.getElementById('admin-login-form');
+      const passwordInput = document.getElementById('admin-password');
+      const loginError = document.getElementById('login-error');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const logoutBtn = document.getElementById('admin-logout-btn');
+      const userSearchInput = document.getElementById('user-search');
+      const exportCsvBtn = document.getElementById('export-csv-btn');
+
+      const statTotalUsers = document.getElementById('stat-total-users');
+      const statActiveToday = document.getElementById('stat-active-today');
+      const statTotalMessages = document.getElementById('stat-total-messages');
+      const statPendingSub = document.getElementById('stat-pending-sub');
+      const statDestroyedMessages = document.getElementById('stat-destroyed-messages');
+
+      const usersTableBody = document.getElementById('users-table-body');
+      const logsTableBody = document.getElementById('logs-table-body');
+
+      let allUsers = [];
+      let refreshTimer = null;
+
+      function getAdminToken() {
+        return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+      }
+
+      function setAdminToken(token) {
+        if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+        else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      }
+
+      function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+      }
+
+      function shortUA(ua) {
+        if (!ua) return '-';
+        if (ua.includes('iPhone')) return '📱 iPhone / iOS';
+        if (ua.includes('Android')) return '📱 Android';
+        if (ua.includes('Mac OS X')) return '💻 macOS';
+        if (ua.includes('Windows')) return '💻 Windows PC';
+        if (ua.includes('Linux')) return '💻 Linux';
+        return ua.slice(0, 36);
+      }
+
+      function renderUsersTable(filterText = '') {
+        const q = filterText.trim().toLowerCase();
+        const filtered = allUsers.filter((u) => {
+          if (!q) return true;
+          return (
+            (u.name || '').toLowerCase().includes(q) ||
+            (u.email || '').toLowerCase().includes(q) ||
+            (u.lastIp || '').toLowerCase().includes(q)
+          );
+        });
+
+        if (filtered.length === 0) {
+          usersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--muted);">Belum ada data pengguna yang cocok.</td></tr>';
+          return;
+        }
+
+        usersTableBody.innerHTML = filtered
+          .map((u, idx) => {
+            const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
+            return `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>
+                  <div class="user-cell">
+                    <img src="${avatar}" class="avatar-sm" alt="" />
+                    <strong>${u.name || '-'}</strong>
+                  </div>
+                </td>
+                <td class="mono" style="color:#6ee7b7;">${u.email}</td>
+                <td><strong>${u.messagesCreated || 0}</strong> pesan</td>
+                <td class="mono">${u.lastIp || '-'}</td>
+                <td>${shortUA(u.userAgent)}</td>
+                <td>${formatDate(u.createdAt)}</td>
+                <td>${formatDate(u.lastLoginAt)}</td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+
+      function renderLogsTable(logs) {
+        if (!logs || logs.length === 0) {
+          logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted);">Belum ada riwayat pengiriman pesan.</td></tr>';
+          return;
+        }
+
+        logsTableBody.innerHTML = logs
+          .map((l) => {
+            let badgeHtml = '<span class="badge badge-pending">⏳ Menunggu Dibuka</span>';
+            if (l.status === 'destroyed') {
+              badgeHtml = '<span class="badge badge-destroyed">🔥 Sudah Dibuka & Hancur</span>';
+            } else if (l.status === 'expired') {
+              badgeHtml = '<span class="badge badge-expired">⌛ Kedaluwarsa</span>';
+            }
+
+            return `
+              <tr>
+                <td class="mono">${l.id}</td>
+                <td>
+                  <strong>${l.senderName || '-'}</strong><br/>
+                  <span class="mono" style="color:#9ca3af; font-size:0.76rem;">${l.senderEmail}</span>
+                </td>
+                <td>${l.protectionMode === 'hold' ? '👆 Tahan Tombol' : '🔦 Spotlight'} (${l.viewTimerSeconds}d)</td>
+                <td>${badgeHtml}</td>
+                <td>${formatDate(l.createdAt)}</td>
+                <td>${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
+                <td class="mono">${l.openerIp ? `${l.openerIp} (${shortUA(l.openerUserAgent)})` : '-'}</td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+
+      async function loadDashboard() {
+        const token = getAdminToken();
+        if (!token) return;
+
+        try {
+          const res = await fetch('/api/admin/dashboard', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.status === 401) {
+            setAdminToken('');
+            showLogin();
+            return;
+          }
+          const data = await res.json();
+          statTotalUsers.textContent = data.stats?.totalUsers ?? 0;
+          statActiveToday.textContent = data.stats?.activeUsersToday ?? 0;
+          statTotalMessages.textContent = data.stats?.totalMessages ?? 0;
+          statPendingSub.textContent = `${data.stats?.pendingMessages ?? 0} menunggu dibuka`;
+          statDestroyedMessages.textContent = data.stats?.destroyedMessages ?? 0;
+
+          allUsers = data.users || [];
+          renderUsersTable(userSearchInput.value);
+          renderLogsTable(data.logs || []);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      function showDashboard() {
+        loginSection.classList.add('hidden');
+        dashboardSection.classList.remove('hidden');
+        refreshBtn.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        loadDashboard();
+        clearInterval(refreshTimer);
+        refreshTimer = setInterval(loadDashboard, 10000);
+      }
+
+      function showLogin() {
+        clearInterval(refreshTimer);
+        dashboardSection.classList.add('hidden');
+        refreshBtn.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        loginSection.classList.remove('hidden');
+      }
+
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: passwordInput.value })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Login gagal.');
+          }
+          setAdminToken(data.token);
+          passwordInput.value = '';
+          showDashboard();
+        } catch (err) {
+          loginError.textContent = err.message;
+          loginError.classList.remove('hidden');
+        }
+      });
+
+      refreshBtn.addEventListener('click', loadDashboard);
+
+      logoutBtn.addEventListener('click', () => {
+        setAdminToken('');
+        showLogin();
+      });
+
+      userSearchInput.addEventListener('input', () => {
+        renderUsersTable(userSearchInput.value);
+      });
+
+      exportCsvBtn.addEventListener('click', () => {
+        if (!allUsers.length) return;
+        const headers = ['ID', 'Nama', 'Email Gmail', 'Total Pesan', 'IP Terakhir', 'Perangkat', 'Pertama Masuk', 'Terakhir Aktif'];
+        const rows = allUsers.map((u) => [
+          u.id,
+          `"${(u.name || '').replace(/"/g, '""')}"`,
+          u.email,
+          u.messagesCreated || 0,
+          u.lastIp || '',
+          `"${(u.userAgent || '').replace(/"/g, '""')}"`,
+          u.createdAt || '',
+          u.lastLoginAt || ''
+        ]);
+        const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pengguna-pesanrahasia-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+      });
+
+      if (getAdminToken()) {
+        showDashboard();
+      }
+    })();
+  </script>
+</body>
+</html>
