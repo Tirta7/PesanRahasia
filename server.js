@@ -52,7 +52,14 @@ import {
   saveAppSettings
 } from './src/db.js';
 
-import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML, invalidateUserLicenseCache } from './src/license.js';
+import {
+  getLicenseStatus,
+  verifyUserAccountLicense,
+  renderLockedScreenHTML,
+  invalidateUserLicenseCache,
+  emailToMachineId
+} from './src/license.js';
+import { LICENSE_PLANS, findPlan, formatRupiah } from './src/plans.js';
 import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src/webpush.js';
 
 const PORT = Number(process.env.PORT) || 3006;
@@ -159,6 +166,7 @@ setInterval(async () => {
 // Proteksi Brute-Force Login Admin & Rate Limiting
 const adminLoginAttempts = new Map();
 const messageCreateRateMap = new Map();
+const orderNotifyAt = new Map();
 
 function checkAdminLoginRateLimit(ip) {
   const now = Date.now();
@@ -449,12 +457,52 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/auth/config') {
       const { publicKey } = getVapidKeys();
       const settings = await getAppSettings();
+      const lic = getLicenseStatus();
       return sendJson(res, 200, {
         googleClientId: settings.googleClientId || process.env.GOOGLE_CLIENT_ID || '',
         strictGoogleOAuth: Boolean(settings.strictGoogleOAuth && settings.googleClientId),
         adminWhatsapp: settings.adminWhatsapp || ADMIN_WHATSAPP,
-        vapidPublicKey: publicKey
+        vapidPublicKey: publicKey,
+        vocmlBaseUrl: lic.serverUrl,
+        vocmlProduct: lic.product,
+        plans: LICENSE_PLANS
       });
+    }
+
+    // Konfirmasi "Saya Sudah Bayar": beri tahu Admin paket & nominal yang dipilih pembeli
+    if (req.method === 'POST' && pathname === '/api/license/order') {
+      const orderToken = getBearerToken(req);
+      const orderUser = await getUserBySessionToken(orderToken);
+      if (!orderUser) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      let orderBody;
+      try {
+        orderBody = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+      const plan = findPlan(String(orderBody.planKey || ''));
+      if (!plan) {
+        return sendJson(res, 400, { error: 'Paket tidak valid.' });
+      }
+
+      const lastAt = orderNotifyAt.get(orderUser.email) || 0;
+      if (Date.now() - lastAt < 30 * 1000) {
+        return sendJson(res, 200, { success: true, throttled: true, plan });
+      }
+      orderNotifyAt.set(orderUser.email, Date.now());
+
+      const orderMachineId = emailToMachineId(orderUser.email);
+      broadcastWebPushToAdmins({
+        title: `💰 Konfirmasi Bayar: ${plan.label} (${formatRupiah(plan.price)})`,
+        body: `${orderUser.name} (${orderUser.email}) memilih paket ${plan.label} dan menekan "Saya Sudah Bayar".\nID Lisensi: ${orderMachineId}\nAktifkan di VOC ML: +${plan.days} hari.`,
+        url: '/admin',
+        email: orderUser.email,
+        machineId: orderMachineId,
+        tag: `order-${orderUser.email}`
+      });
+      return sendJson(res, 200, { success: true, plan });
     }
 
     // Live License Stream (SSE): push instan perubahan lisensi VOC ML ke browser

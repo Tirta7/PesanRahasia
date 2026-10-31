@@ -38,6 +38,8 @@
   const btnCekBayar = document.getElementById('btnCekBayar');
   const statusTeks = document.getElementById('statusTeks');
   const licDefaultPolling = document.getElementById('lic-default-polling');
+  const planList = document.getElementById('plan-list');
+  const planExpiryInfo = document.getElementById('plan-expiry-info');
 
   const trialQuotaBanner = document.getElementById('trial-quota-banner');
   const trialBannerTitle = document.getElementById('trial-banner-title');
@@ -459,21 +461,9 @@
         : `https://wa.me/?text=${encodeURIComponent(waText)}`;
     }
 
-    if (licQrisBox && license?.billing && (license.billing.qris || license.billing.qris_image_url)) {
-      const b = license.billing;
-      qrisAmount.textContent = b.amount_text || `Rp ${(b.amount || 0).toLocaleString('id-ID')}`;
-      qrisMerchant.textContent = [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ');
-      qrisImg.src =
-        b.qris_image_url ||
-        `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(b.qris)}`;
-      if (b.note) qrisNote.textContent = b.note;
-      if (btnCekBayar) btnCekBayar.style.display = 'inline-flex';
-      licQrisBox.classList.remove('hidden');
-      if (licDefaultPolling) licDefaultPolling.classList.add('hidden');
-    } else if (licQrisBox) {
-      licQrisBox.classList.add('hidden');
-      if (licDefaultPolling) licDefaultPolling.classList.remove('hidden');
-    }
+    renderPlanPicker(user, license);
+    if (btnCekBayar) btnCekBayar.style.display = 'inline-flex';
+    if (licDefaultPolling) licDefaultPolling.classList.add('hidden');
 
     showView(accountLicenseView);
     startLicensePolling();
@@ -493,6 +483,7 @@
       if (isManualClick && btnCekBayar) {
         btnCekBayar.innerText = "⏳ Sedang Memeriksa Server...";
         btnCekBayar.disabled = true;
+        notifyAdminPaymentClaim();
       }
 
       try {
@@ -734,6 +725,175 @@
 
   if (userPushBtn) {
     userPushBtn.addEventListener('click', subscribeUserReadReceiptPush);
+  }
+
+  // ============================================================================
+  // 2A0. PEMILIH PAKET PERPANJANGAN & QRIS DINAMIS SESUAI NOMINAL
+  // ============================================================================
+  let selectedPlanKey = '1m';
+  let planCtx = { user: null, license: null };
+
+  function formatRupiah(n) {
+    return 'Rp' + Number(n || 0).toLocaleString('id-ID');
+  }
+
+  function getPlans() {
+    return Array.isArray(publicConfig.plans) ? publicConfig.plans : [];
+  }
+
+  function getSelectedPlan() {
+    const plans = getPlans();
+    return plans.find((p) => p.key === selectedPlanKey) || plans[0] || null;
+  }
+
+  function estimateNewExpiry(license, plan) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    let start = now;
+    if (license?.expiresAt) {
+      const cur = new Date(license.expiresAt);
+      if (!isNaN(cur.getTime()) && cur.getTime() > now.getTime()) {
+        start = cur;
+      }
+    }
+    const next = new Date(start.getTime() + plan.days * 86400000);
+    return next.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function buildQrisImageUrl(license, amount) {
+    const base = (publicConfig.vocmlBaseUrl || '').replace(/\/+$/, '');
+    const product = publicConfig.vocmlProduct || 'pos';
+    const mid = license?.machineId || '';
+    if (license?.billing?.qris_image_url) {
+      try {
+        const u = new URL(license.billing.qris_image_url);
+        u.searchParams.set('amount', String(amount));
+        return u.toString();
+      } catch {
+        // Lanjut ke URL bawaan
+      }
+    }
+    return `${base}/api/v1/billing/qris.png?machine_id=${encodeURIComponent(mid)}&product=${encodeURIComponent(product)}&amount=${amount}`;
+  }
+
+  function applySelectedPlan() {
+    const { user, license } = planCtx;
+    const plan = getSelectedPlan();
+    if (!plan || !license) return;
+
+    if (planList) {
+      planList.querySelectorAll('.plan-card[data-plan]').forEach((el) => {
+        el.classList.toggle('active', el.dataset.plan === plan.key);
+      });
+    }
+
+    const b = license.billing || {};
+    qrisAmount.textContent = formatRupiah(plan.price);
+    qrisMerchant.textContent =
+      [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ') || 'Pembayaran Lisensi PesanRahasia';
+    qrisImg.src = buildQrisImageUrl(license, plan.price);
+    qrisNote.textContent = `Scan QRIS untuk membayar paket ${plan.label} (${formatRupiah(plan.price)}). Masa aktif bertambah ${plan.label} setelah pembayaran terverifikasi.`;
+    licQrisBox.classList.remove('hidden');
+
+    if (planExpiryInfo) {
+      planExpiryInfo.textContent = `Paket ${plan.label} • ${formatRupiah(plan.perDay)}/hari • Estimasi masa aktif baru s/d ${estimateNewExpiry(license, plan)}`;
+    }
+
+    if (waAdminActivateBtn && user) {
+      const waText =
+        `Halo Admin *PesanRahasia*,\n\n` +
+        `Saya ingin mengaktifkan *Lisensi Pro* untuk akun saya:\n` +
+        `• Nama: *${user.name}*\n` +
+        `• Email Gmail: *${user.email}*\n` +
+        `• ID Lisensi (VOC ML): *${license.machineId || '-'}*\n` +
+        `• Paket: *${plan.label} (${formatRupiah(plan.price)})*\n\n` +
+        `Mohon bantuannya untuk aktivasi. Terima kasih!`;
+      const phone = publicConfig.adminWhatsapp || '';
+      waAdminActivateBtn.href = phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
+        : `https://wa.me/?text=${encodeURIComponent(waText)}`;
+    }
+  }
+
+  function renderPlanPicker(user, license) {
+    planCtx = { user, license };
+    const plans = getPlans();
+    if (!planList || plans.length === 0) {
+      // Tanpa daftar paket: kembali ke QRIS bawaan VOC ML
+      if (licQrisBox && license?.billing && (license.billing.qris || license.billing.qris_image_url)) {
+        const b = license.billing;
+        qrisAmount.textContent = b.amount_text || formatRupiah(b.amount || 0);
+        qrisMerchant.textContent = [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ');
+        qrisImg.src = b.qris_image_url || '';
+        if (b.note) qrisNote.textContent = b.note;
+        licQrisBox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!plans.some((p) => p.key === selectedPlanKey)) {
+      selectedPlanKey = (plans.find((p) => p.popular) || plans[0]).key;
+    }
+
+    const cards = plans
+      .map((p) => {
+        const badges = [];
+        if (p.popular) badges.push('<span class="plan-badge">POPULER</span>');
+        else if (p.savePct >= 10) badges.push(`<span class="plan-badge save">HEMAT ${p.savePct}%</span>`);
+        return `
+          <button type="button" class="plan-card" data-plan="${p.key}">
+            ${badges.join('')}
+            <span class="plan-card-label">${p.label}</span>
+            <span class="plan-card-price">${formatRupiah(p.price)}</span>
+            <span class="plan-card-sub">${formatRupiah(p.perDay)}/hari${p.popular && p.savePct >= 10 ? ` • hemat ${p.savePct}%` : ''}</span>
+          </button>`;
+      })
+      .join('');
+
+    const phone = publicConfig.adminWhatsapp || '';
+    const bizText =
+      `Halo Admin *PesanRahasia*, saya tertarik paket *Business / Kebutuhan Khusus*.\n` +
+      `• Nama: *${user?.name || '-'}*\n• Email: *${user?.email || '-'}*\n• ID Lisensi: *${license?.machineId || '-'}*\n\n` +
+      `Mohon info lebih lanjut.`;
+    const bizHref = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(bizText)}`
+      : `https://wa.me/?text=${encodeURIComponent(bizText)}`;
+
+    planList.innerHTML =
+      cards +
+      `<a class="plan-card plan-card-business" href="${bizHref}" target="_blank" rel="noopener noreferrer">
+        <span>
+          <span class="plan-card-label">🏢 Business / Kebutuhan Khusus</span><br />
+          <span class="plan-card-sub">Banyak pengguna, integrasi, atau durasi custom — hubungi kami</span>
+        </span>
+        <span class="plan-card-label">Hubungi ↗</span>
+      </a>`;
+
+    applySelectedPlan();
+  }
+
+  if (planList) {
+    planList.addEventListener('click', (e) => {
+      const card = e.target.closest('.plan-card[data-plan]');
+      if (!card) return;
+      selectedPlanKey = card.dataset.plan;
+      applySelectedPlan();
+    });
+  }
+
+  async function notifyAdminPaymentClaim() {
+    const token = getSessionToken();
+    const plan = getSelectedPlan();
+    if (!token || !plan) return;
+    try {
+      await fetch('/api/license/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ planKey: plan.key })
+      });
+    } catch {
+      // Abaikan jika notifikasi gagal
+    }
   }
 
   // ============================================================================
