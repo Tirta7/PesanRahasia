@@ -49,7 +49,7 @@ if not exist ".env" (
 
     (
       echo PORT=3006
-      echo PUBLIC_BASE_URL=https://privatmassage.vocpos.id
+      echo PUBLIC_BASE_URL=https://message.vocpos.id
       echo PGUSER=postgres
       echo PGPASSWORD=postgres
       echo PGDATABASE=pesan_rahasia
@@ -90,7 +90,7 @@ echo.
 echo ============================================================
 echo   INSTALASI SELESAI!
 echo   URL Lokal               : http://localhost:3006
-echo   Domain Publik           : https://privatmassage.vocpos.id
+echo   Domain Publik           : https://message.vocpos.id
 echo   Machine ID Komputer ini : %MACHINE_ID%
 echo   Daftarkan Machine ID di atas pada Dashboard VOC ML Anda.
 echo ============================================================

@@ -1,14 +1,16 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: pesanrahasia_client_db
+    container_name: pesanrahasia_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PGUSER:-postgres}
       POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
       POSTGRES_DB: ${PGDATABASE:-pesan_rahasia}
+    ports:
+      - "${PGPORT_EXTERNAL:-5433}:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-pesan_rahasia}"]
       interval: 10s
@@ -17,10 +19,10 @@ services:
 
   app:
     build:
-      context: ./app
+      context: .
       dockerfile: Dockerfile
-    image: ${APP_IMAGE:-ghcr.io/tirta7/pesanrahasia:latest}
-    container_name: pesanrahasia_client_app
+    image: ghcr.io/tirta7/pesanrahasia:latest
+    container_name: pesanrahasia_app
     restart: unless-stopped
     depends_on:
       postgres:
@@ -28,34 +30,37 @@ services:
     ports:
       - "${PORT:-3006}:3006"
     environment:
-      - PORT=3006
-      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://privatmassage.vocpos.id}
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGUSER=${PGUSER:-postgres}
-      - PGPASSWORD=${PGPASSWORD:-postgres}
-      - PGDATABASE=${PGDATABASE:-pesan_rahasia}
-      - STORE_NAME=${STORE_NAME:-Cabang Utama}
-      - VOCML_ENABLED=${VOCML_ENABLED:-true}
-      - VOCML_SERVER_URL=${VOCML_SERVER_URL:-https://vocml.vocpos.id}
-      - VOCML_PRODUCT=pos
-      - VOCML_MACHINE_ID=${VOCML_MACHINE_ID:-}
-      - VOCML_CACHE_FILE=/data/license-cache.json
+      PORT: 3006
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://message.vocpos.id}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD:-postgres}
+      PGDATABASE: ${PGDATABASE:-pesan_rahasia}
+      STORE_NAME: ${STORE_NAME:-PesanRahasia VOCPOS}
+      VOCML_ENABLED: ${VOCML_ENABLED:-true}
+      VOCML_SERVER_URL: ${VOCML_SERVER_URL:-https://vocml.vocpos.id}
+      VOCML_PRODUCT: ${VOCML_PRODUCT:-pos}
+      VOCML_MACHINE_ID: ${VOCML_MACHINE_ID:-}
+      VOCML_CACHE_FILE: /data/license-cache.json
     volumes:
       - ./data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3006/api/health || exit 0"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3006/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: pesanrahasia_client_tunnel
+    container_name: pesanrahasia_tunnel
     restart: unless-stopped
     depends_on:
       - app
     command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run 6eb73da6-6cbe-4e08-bb0c-48520f7fe9c1
     volumes:
       - ./cloudflared:/etc/cloudflared:ro
+
+volumes:
+  pgdata:
 

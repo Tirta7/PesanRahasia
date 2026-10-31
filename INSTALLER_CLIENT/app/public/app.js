@@ -79,6 +79,9 @@
   const sharePinReminder = document.getElementById('share-pin-reminder');
   const sharePinCode = document.getElementById('share-pin-code');
   const whatsappShareBtn = document.getElementById('whatsapp-share-btn');
+  const waTemplateChips = document.getElementById('wa-template-chips');
+  const waPreviewText = document.getElementById('wa-preview-text');
+  const copyWaTextBtn = document.getElementById('copy-wa-text-btn');
   const nativeShareBtn = document.getElementById('native-share-btn');
   const createAnotherBtn = document.getElementById('create-another-btn');
 
@@ -1224,7 +1227,7 @@
           updateUserHeader(data.user || currentUser, data.license || currentLicense);
         }
 
-        const baseUrl = (data.publicBaseUrl || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
+        const baseUrl = (data.publicBaseUrl || 'https://message.vocpos.id').replace(/\/+$/, '');
         const secretUrl = `${baseUrl}/m/${data.id}#${encrypted.key}`;
         generatedLinkInput.value = secretUrl;
 
@@ -1237,13 +1240,9 @@
           }
         }
 
-        const pinNote = pin ? `\n🔑 *PIN Pembuka:* ${pin}\n` : '\n';
-        const waMessage =
-          `🔒 *Pesan Rahasia Sekali Baca*\n\n` +
-          `Saya mengirimkan pesan rahasia untuk Anda. Pesan ini hanya bisa dibuka *SATU KALI* dan akan otomatis hancur selamanya setelah Anda membukanya:\n` +
-          pinNote +
-          `\n${secretUrl}`;
-        whatsappShareBtn.href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+        currentShareUrl = secretUrl;
+        currentSharePin = pin || '';
+        updateWaShareView();
 
         secretInput.value = '';
         if (secretPinInput) secretPinInput.value = '';
@@ -1260,6 +1259,73 @@
       } finally {
         generateBtn.disabled = false;
         generateBtn.innerHTML = originalBtnHtml;
+      }
+    });
+  }
+
+  // State & Formatter Template WhatsApp
+  let currentShareUrl = '';
+  let currentSharePin = '';
+  let currentWaFormat = 'formal';
+
+  function formatWaShareMessage(format, url, pin) {
+    if (!url) return '';
+    const pinPart = pin ? `\n🔑 *PIN Akses:* ${pin}\n` : '';
+
+    if (format === 'minimal') {
+      return `Halo, berikut pesan aman untuk Anda (hanya bisa dibuka sekali):\n` +
+        `🔗 ${url}\n` +
+        pinPart;
+    }
+
+    if (format === 'standard') {
+      return `🔒 *Dokumen Terenkripsi (Sekali Buka)*\n\n` +
+        `Berikut tautan aman untuk Anda:\n` +
+        `🔗 ${url}\n` +
+        pinPart +
+        `\nPesan ini terenkripsi End-to-End dan otomatis terhapus setelah dibuka.`;
+    }
+
+    // Default: 'formal' (Bisnis & Profesional)
+    return `Halo, saya mengirimkan catatan/dokumen rahasia untuk Anda melalui tautan terenkripsi berikut:\n\n` +
+      `🔗 ${url}\n` +
+      pinPart +
+      `\n*Catatan:* Tautan ini dilindungi enkripsi sekali buka demi keamanan data (otomatis terhapus setelah dibaca).`;
+  }
+
+  function updateWaShareView() {
+    const formatted = formatWaShareMessage(currentWaFormat, currentShareUrl, currentSharePin);
+    if (waPreviewText) waPreviewText.textContent = formatted;
+    if (whatsappShareBtn) {
+      whatsappShareBtn.href = `https://wa.me/?text=${encodeURIComponent(formatted)}`;
+    }
+  }
+
+  if (waTemplateChips) {
+    const chips = waTemplateChips.querySelectorAll('.wa-chip');
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentWaFormat = chip.dataset.format || 'formal';
+        updateWaShareView();
+      });
+    });
+  }
+
+  if (copyWaTextBtn) {
+    copyWaTextBtn.addEventListener('click', async () => {
+      const formatted = formatWaShareMessage(currentWaFormat, currentShareUrl, currentSharePin);
+      if (!formatted) return;
+      try {
+        await navigator.clipboard.writeText(formatted);
+        copyWaTextBtn.textContent = '✓ Tersalin!';
+        showToast('📋 Format teks WhatsApp lengkap berhasil disalin!');
+        setTimeout(() => {
+          copyWaTextBtn.textContent = 'Salin Teks Lengkap';
+        }, 2000);
+      } catch {
+        showToast('❌ Gagal menyalin teks.');
       }
     });
   }
@@ -1286,11 +1352,12 @@
   if (nativeShareBtn) {
     nativeShareBtn.addEventListener('click', async () => {
       const link = generatedLinkInput.value;
+      const formattedText = formatWaShareMessage(currentWaFormat, currentShareUrl, currentSharePin);
       if (navigator.share) {
         try {
           await navigator.share({
-            title: '🔒 Pesan Rahasia Sekali Baca',
-            text: 'Buka pesan rahasia ini (otomatis hancur setelah dibuka satu kali):',
+            title: '🔒 Dokumen Terenkripsi Sekali Buka',
+            text: formattedText,
             url: link
           });
         } catch {

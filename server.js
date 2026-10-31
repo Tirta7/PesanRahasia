@@ -63,7 +63,7 @@ import { LICENSE_PLANS, findPlan, formatRupiah } from './src/plans.js';
 import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src/webpush.js';
 
 const PORT = Number(process.env.PORT) || 3006;
-const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://message.vocpos.id').replace(/\/+$/, '');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '').replace(/[^0-9]/g, '');
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -406,11 +406,11 @@ function generateShortId() {
   return crypto.randomBytes(8).toString('base64url');
 }
 
-function serveStaticFile(res, filePath) {
+function serveStaticFile(res, filePath, isHead = false) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  fs.readFile(filePath, (err, content) => {
+  fs.stat(filePath, (err, stats) => {
     if (err) {
       if (err.code === 'ENOENT') {
         sendJson(res, 404, { error: 'Halaman tidak ditemukan.' });
@@ -420,8 +420,14 @@ function serveStaticFile(res, filePath) {
       return;
     }
     setSecurityHeaders(res);
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(content);
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': stats.size
+    });
+    if (isHead) {
+      return res.end();
+    }
+    fs.createReadStream(filePath).pipe(res);
   });
 }
 
@@ -1156,41 +1162,45 @@ const server = http.createServer(async (req, res) => {
     }
 
     // 4. Rute halaman Admin Dashboard: /admin -> Sajikan admin.html
-    if (req.method === 'GET' && (pathname === '/admin' || pathname === '/admin/')) {
-      return serveStaticFile(res, path.join(PUBLIC_DIR, 'admin.html'));
+    const isGetOrHead = req.method === 'GET' || req.method === 'HEAD';
+    const isHead = req.method === 'HEAD';
+
+    if (isGetOrHead && (pathname === '/admin' || pathname === '/admin/')) {
+      return serveStaticFile(res, path.join(PUBLIC_DIR, 'admin.html'), isHead);
     }
 
     // Rute Favicon: /favicon.ico -> Sajikan favicon.svg
-    if (req.method === 'GET' && pathname === '/favicon.ico') {
-      return serveStaticFile(res, path.join(PUBLIC_DIR, 'favicon.svg'));
+    if (isGetOrHead && (pathname === '/favicon.ico' || pathname === '/favicon.svg')) {
+      return serveStaticFile(res, path.join(PUBLIC_DIR, 'favicon.svg'), isHead);
     }
 
-    // Rute Ikon PNG untuk PWA (192x192 & 512x512)
-    if (req.method === 'GET' && (pathname === '/icon-192.png' || pathname === '/icon-512.png')) {
-      const size = pathname.includes('512') ? 512 : 192;
+    // Rute Ikon PNG untuk PWA (192x192 & 512x512) & OpenGraph WhatsApp
+    if (isGetOrHead && (pathname === '/icon-192.png' || pathname === '/icon-512.png' || pathname === '/og-image.png')) {
+      const size = (pathname.includes('512') || pathname.includes('og-image')) ? 512 : 192;
       const pngBuffer = generatePwaIconPng(size);
       res.writeHead(200, {
         'Content-Type': 'image/png',
         'Content-Length': pngBuffer.length,
         'Cache-Control': 'public, max-age=86400'
       });
+      if (isHead) return res.end();
       return res.end(pngBuffer);
     }
 
     // 5. Rute halaman baca pesan: /m/:id -> Sajikan index.html
-    if (req.method === 'GET' && /^\/m\/[A-Za-z0-9_-]+$/.test(pathname)) {
-      return serveStaticFile(res, path.join(PUBLIC_DIR, 'index.html'));
+    if (isGetOrHead && /^\/m\/[A-Za-z0-9_-]+$/.test(pathname)) {
+      return serveStaticFile(res, path.join(PUBLIC_DIR, 'index.html'), isHead);
     }
 
     // 6. Rute file statis di folder public/
-    if (req.method === 'GET') {
+    if (isGetOrHead) {
       let safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
       if (safePath === '/' || safePath === '\\') {
         safePath = '/index.html';
       }
       const filePath = path.join(PUBLIC_DIR, safePath);
       if (filePath.startsWith(PUBLIC_DIR)) {
-        return serveStaticFile(res, filePath);
+        return serveStaticFile(res, filePath, isHead);
       }
     }
 

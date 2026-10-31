@@ -71,6 +71,6 @@ docker compose up -d --build
 npm install
 npm start
 ```
-- **Aplikasi Utama**: `http://localhost:3006` / `https://privatmassage.vocpos.id`
-- **Dashboard Admin (Rahasia)**: `http://localhost:3006/admin` / `https://privatmassage.vocpos.id/admin`
+- **Aplikasi Utama**: `http://localhost:3006` / `https://message.vocpos.id`
+- **Dashboard Admin (Rahasia)**: `http://localhost:3006/admin` / `https://message.vocpos.id/admin`
 - **Server Lisensi VOC ML**: `https://vocml.vocpos.id`

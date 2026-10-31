@@ -31,7 +31,7 @@ services:
       - "${PORT:-3006}:3006"
     environment:
       PORT: 3006
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://privatmassage.vocpos.id}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://message.vocpos.id}
       PGHOST: postgres
       PGPORT: 5432
       PGUSER: ${PGUSER:-postgres}
