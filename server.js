@@ -30,6 +30,7 @@ import {
   loginOrRegisterGmailUser,
   getUserBySessionToken,
   logoutSessionToken,
+  updateUserLicenseInDb,
   createSecretMessage,
   getSecretMessageMeta,
   consumeSecretMessage,
@@ -38,7 +39,7 @@ import {
   getStorageEngineName
 } from './src/db.js';
 
-import { getLicenseStatus, renderLockedScreenHTML } from './src/license.js';
+import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML } from './src/license.js';
 
 const PORT = Number(process.env.PORT) || 3006;
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
@@ -196,7 +197,14 @@ const server = http.createServer(async (req, res) => {
       if (!user) {
         return sendJson(res, 401, { authenticated: false });
       }
-      return sendJson(res, 200, { authenticated: true, user });
+      const license = await verifyUserAccountLicense(user);
+      await updateUserLicenseInDb({
+        email: user.email,
+        machineId: license.machineId,
+        status: license.status,
+        expiresAt: license.expiresAt
+      });
+      return sendJson(res, 200, { authenticated: true, user, license });
     }
 
     if (req.method === 'POST' && pathname === '/api/auth/google') {
@@ -254,10 +262,19 @@ const server = http.createServer(async (req, res) => {
         provider
       });
 
+      const license = await verifyUserAccountLicense(session.user);
+      await updateUserLicenseInDb({
+        email: session.user.email,
+        machineId: license.machineId,
+        status: license.status,
+        expiresAt: license.expiresAt
+      });
+
       return sendJson(res, 200, {
         authenticated: true,
         user: session.user,
-        token: session.token
+        token: session.token,
+        license
       });
     }
 
@@ -308,6 +325,14 @@ const server = http.createServer(async (req, res) => {
       if (!user) {
         return sendJson(res, 401, {
           error: 'Silakan login dengan akun Gmail Anda terlebih dahulu untuk membuat pesan rahasia.'
+        });
+      }
+
+      const license = await verifyUserAccountLicense(user);
+      if (!license.allowed) {
+        return sendJson(res, 403, {
+          error: license.reason || 'Lisensi akun Gmail Anda belum aktif.',
+          license
         });
       }
 

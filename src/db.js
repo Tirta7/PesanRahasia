@@ -116,8 +116,11 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_message_logs_created_at ON message_logs(created_at DESC);
     `);
 
-    // Pastikan kolom user_id ada di secret_messages jika tabel dibuat dari versi sebelumnya
+    // Pastikan kolom user_id & kolom lisensi VOC ML ada jika tabel dibuat dari versi sebelumnya
     await pool.query(`ALTER TABLE secret_messages ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`).catch(() => {});
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS machine_id VARCHAR(64);`).catch(() => {});
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_status VARCHAR(32) DEFAULT 'pending';`).catch(() => {});
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_expires_at VARCHAR(64);`).catch(() => {});
 
     isPostgresReady = true;
     console.log('[PostgreSQL] ✅ Terhubung ke PostgreSQL & tabel (users, secret_messages, message_logs) siap digunakan.');
@@ -218,6 +221,32 @@ export async function logoutSessionToken(token) {
     return;
   }
   memorySessions.delete(token);
+}
+
+export async function updateUserLicenseInDb({ email, machineId, status, expiresAt }) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return;
+
+  if (isPostgresReady && pool) {
+    await pool
+      .query(
+        `UPDATE users
+         SET machine_id = $2,
+             license_status = $3,
+             license_expires_at = $4
+         WHERE email = $1`,
+        [cleanEmail, machineId || '', status || 'pending', expiresAt || null]
+      )
+      .catch(() => {});
+    return;
+  }
+
+  if (memoryUsers.has(cleanEmail)) {
+    const u = memoryUsers.get(cleanEmail);
+    u.machineId = machineId;
+    u.licenseStatus = status;
+    u.licenseExpiresAt = expiresAt;
+  }
 }
 
 // ============================================================================
@@ -383,6 +412,9 @@ export async function getAdminDashboardData() {
           name,
           picture,
           auth_provider AS "authProvider",
+          machine_id AS "machineId",
+          license_status AS "licenseStatus",
+          license_expires_at AS "licenseExpiresAt",
           last_ip AS "lastIp",
           user_agent AS "userAgent",
           messages_created AS "messagesCreated",

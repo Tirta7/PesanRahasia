@@ -5,6 +5,7 @@
 
   // Elemen DOM Utama
   const loginView = document.getElementById('login-view');
+  const accountLicenseView = document.getElementById('account-license-view');
   const createView = document.getElementById('create-view');
   const shareView = document.getElementById('share-view');
   const gateView = document.getElementById('gate-view');
@@ -16,7 +17,19 @@
   const userAvatar = document.getElementById('user-avatar');
   const userNameDisplay = document.getElementById('user-name-display');
   const userEmailDisplay = document.getElementById('user-email-display');
+  const userLicenseBadge = document.getElementById('user-license-badge');
   const logoutBtn = document.getElementById('logout-btn');
+
+  const licAccountName = document.getElementById('lic-account-name');
+  const licReasonText = document.getElementById('lic-reason-text');
+  const licMachineId = document.getElementById('lic-machine-id');
+  const copyMidBtn = document.getElementById('copy-mid-btn');
+  const switchAccountBtn = document.getElementById('switch-account-btn');
+  const licQrisBox = document.getElementById('lic-qris-box');
+  const qrisAmount = document.getElementById('qris-amount');
+  const qrisMerchant = document.getElementById('qris-merchant');
+  const qrisImg = document.getElementById('qris-img');
+  const qrisNote = document.getElementById('qris-note');
 
   const gmailLoginForm = document.getElementById('gmail-login-form');
   const loginNameInput = document.getElementById('login-name');
@@ -61,6 +74,7 @@
 
   let activeMode = 'spotlight';
   let countdownInterval = null;
+  let licensePollInterval = null;
   let isMessageActive = false;
   let currentUser = null;
 
@@ -200,7 +214,7 @@
   // ============================================================================
 
   function showView(viewElement) {
-    [loginView, createView, shareView, gateView, secretView, destroyedView].forEach((el) => {
+    [loginView, accountLicenseView, createView, shareView, gateView, secretView, destroyedView].forEach((el) => {
       if (el) el.classList.add('hidden');
     });
     if (viewElement) viewElement.classList.remove('hidden');
@@ -216,7 +230,7 @@
     }, 3200);
   }
 
-  function updateUserHeader(user) {
+  function updateUserHeader(user, license) {
     currentUser = user;
     if (user && user.email) {
       userNameDisplay.textContent = user.name || user.email.split('@')[0];
@@ -226,9 +240,92 @@
         `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email)}&background=10b981&color=04130d&bold=true`;
       userProfilePill.classList.remove('hidden');
       vaultPill.classList.add('hidden');
+
+      if (userLicenseBadge) {
+        if (license && license.allowed) {
+          userLicenseBadge.textContent = license.daysLeft != null ? `✓ Aktif (${license.daysLeft} hr)` : '✓ Lisensi Aktif';
+          userLicenseBadge.classList.remove('hidden');
+        } else {
+          userLicenseBadge.classList.add('hidden');
+        }
+      }
     } else {
       userProfilePill.classList.add('hidden');
       vaultPill.classList.remove('hidden');
+    }
+  }
+
+  function renderAccountLicenseScreen(user, license) {
+    if (licAccountName) {
+      licAccountName.textContent = `${user.name} (${user.email})`;
+    }
+    if (licReasonText) {
+      licReasonText.textContent = license?.reason || 'Menunggu Aktivasi Lisensi di Dashboard VOC ML';
+    }
+    if (licMachineId) {
+      licMachineId.textContent = license?.machineId || '-';
+    }
+
+    // Tampilkan Tagihan QRIS Dinamis jika ada dari vocml.vocpos.id
+    if (licQrisBox && license?.billing && (license.billing.qris || license.billing.qris_image_url)) {
+      const b = license.billing;
+      qrisAmount.textContent = b.amount_text || `Rp ${(b.amount || 0).toLocaleString('id-ID')}`;
+      qrisMerchant.textContent = [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ');
+      qrisImg.src =
+        b.qris_image_url ||
+        `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(b.qris)}`;
+      if (b.note) qrisNote.textContent = b.note;
+      licQrisBox.classList.remove('hidden');
+    } else if (licQrisBox) {
+      licQrisBox.classList.add('hidden');
+    }
+
+    showView(accountLicenseView);
+    startLicensePolling();
+  }
+
+  function startLicensePolling() {
+    clearInterval(licensePollInterval);
+    licensePollInterval = setInterval(async () => {
+      const token = getSessionToken();
+      if (!token) {
+        clearInterval(licensePollInterval);
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        updateUserHeader(data.user, data.license);
+        if (data.license && data.license.allowed) {
+          clearInterval(licensePollInterval);
+          showView(createView);
+          showToast('🎉 Lisensi Akun Gmail Anda telah aktif! Silakan buat pesan rahasia.');
+        } else if (data.license) {
+          if (licReasonText) licReasonText.textContent = data.license.reason;
+        }
+      } catch {
+        // Abaikan error jaringan sementara
+      }
+    }, 5000);
+  }
+
+  function applyAuthAndLicenseState(user, license, isFreshLogin = false) {
+    updateUserHeader(user, license);
+    if (license && !license.allowed) {
+      renderAccountLicenseScreen(user, license);
+      if (isFreshLogin) {
+        showToast('🔒 Akun Gmail terdaftar! Menunggu aktivasi lisensi di VOC ML.');
+      }
+      return;
+    }
+    clearInterval(licensePollInterval);
+    showView(createView);
+    if (isFreshLogin) {
+      showToast(`👋 Selamat datang, ${user.name}!`);
     }
   }
 
@@ -272,12 +369,29 @@
       }
 
       setSessionToken(data.token);
-      updateUserHeader(data.user);
-      showView(createView);
-      showToast(`👋 Selamat datang, ${data.user.name}!`);
+      applyAuthAndLicenseState(data.user, data.license, true);
     } catch (err) {
       showToast('❌ ' + (err.message || 'Gagal login dengan Gmail.'));
     }
+  }
+
+  if (copyMidBtn) {
+    copyMidBtn.addEventListener('click', async () => {
+      const mid = licMachineId?.textContent || '';
+      if (!mid) return;
+      try {
+        await navigator.clipboard.writeText(mid);
+        showToast('📋 ID Lisensi Akun berhasil disalin!');
+      } catch {
+        // Abaikan
+      }
+    });
+  }
+
+  if (switchAccountBtn) {
+    switchAccountBtn.addEventListener('click', () => {
+      if (logoutBtn) logoutBtn.click();
+    });
   }
 
   if (gmailLoginForm) {
@@ -306,6 +420,7 @@
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => {});
       }
+      clearInterval(licensePollInterval);
       setSessionToken('');
       updateUserHeader(null);
       showView(loginView);
@@ -369,6 +484,11 @@
           updateUserHeader(null);
           showView(loginView);
           throw new Error('Sesi login Gmail telah habis, silakan masuk kembali.');
+        }
+
+        if (res.status === 403 && data.license) {
+          applyAuthAndLicenseState(currentUser, data.license, false);
+          throw new Error(data.error || 'Lisensi akun Gmail Anda belum aktif.');
         }
 
         if (!res.ok) {
@@ -476,8 +596,7 @@
         });
         if (res.ok) {
           const data = await res.json();
-          updateUserHeader(data.user);
-          showView(createView);
+          applyAuthAndLicenseState(data.user, data.license, false);
           return;
         }
       } catch {

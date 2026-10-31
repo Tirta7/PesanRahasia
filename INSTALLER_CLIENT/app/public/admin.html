@@ -256,6 +256,8 @@
                 <th>No</th>
                 <th>Pengguna</th>
                 <th>Email Gmail</th>
+                <th>ID Lisensi (VOC ML)</th>
+                <th>Status Lisensi</th>
                 <th>Total Pesan</th>
                 <th>IP Address</th>
                 <th>Perangkat / Browser</th>
@@ -264,7 +266,7 @@
               </tr>
             </thead>
             <tbody id="users-table-body">
-              <tr><td colspan="8" style="text-align:center; color:var(--muted);">Memuat data pengguna...</td></tr>
+              <tr><td colspan="10" style="text-align:center; color:var(--muted);">Memuat data pengguna...</td></tr>
             </tbody>
           </table>
         </div>
@@ -360,18 +362,27 @@
           return (
             (u.name || '').toLowerCase().includes(q) ||
             (u.email || '').toLowerCase().includes(q) ||
+            (u.machineId || '').toLowerCase().includes(q) ||
             (u.lastIp || '').toLowerCase().includes(q)
           );
         });
 
         if (filtered.length === 0) {
-          usersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--muted);">Belum ada data pengguna yang cocok.</td></tr>';
+          usersTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--muted);">Belum ada data pengguna yang cocok.</td></tr>';
           return;
         }
 
         usersTableBody.innerHTML = filtered
           .map((u, idx) => {
             const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
+            let licBadge = '<span class="badge badge-pending">⏳ Menunggu Aktivasi</span>';
+            if (u.licenseStatus === 'active' || u.licenseStatus === 'expiring') {
+              licBadge = '<span class="badge" style="background:rgba(16,185,129,0.16);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">✅ Lisensi Aktif</span>';
+            } else if (u.licenseStatus === 'expired') {
+              licBadge = '<span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>';
+            } else if (u.licenseStatus === 'locked') {
+              licBadge = '<span class="badge badge-destroyed">🔒 Dikunci</span>';
+            }
             return `
               <tr>
                 <td>${idx + 1}</td>
@@ -382,6 +393,8 @@
                   </div>
                 </td>
                 <td class="mono" style="color:#6ee7b7;">${u.email}</td>
+                <td class="mono" style="color:#fcd34d;">${u.machineId || '-'}</td>
+                <td>${licBadge}</td>
                 <td><strong>${u.messagesCreated || 0}</strong> pesan</td>
                 <td class="mono">${u.lastIp || '-'}</td>
                 <td>${shortUA(u.userAgent)}</td>
@@ -534,3 +547,4 @@
   </script>
 </body>
 </html>
+

@@ -913,6 +913,157 @@ input[type="password"]:focus {
   background: #f3f4f6;
 }
 
+.user-license-badge {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.license-lock-card {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 20px 55px rgba(153, 27, 27, 0.35);
+}
+
+.lic-info-box {
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.lic-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.lic-row:last-child {
+  border-bottom: none;
+}
+
+.lic-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.lic-value {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.lic-reason {
+  color: #fca5a5;
+}
+
+.lic-mid-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lic-mid-group code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.btn-copy-mini {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lic-qris-box {
+  background: #ffffff;
+  color: #111827;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.qris-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.qris-badge {
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.qris-amount {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #111827;
+}
+
+.qris-merchant {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.qris-img-wrap img {
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.qris-note {
+  font-size: 0.78rem;
+  color: #4b5563;
+  margin-top: 8px;
+}
+
+.lic-polling-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #fca5a5;
+  margin-bottom: 16px;
+}
+
+.pulse-dot-red {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
 .toast {
   position: fixed;
   bottom: 24px;

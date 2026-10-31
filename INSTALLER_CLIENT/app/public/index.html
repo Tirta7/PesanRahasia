@@ -43,6 +43,7 @@
             <span id="user-name-display" class="user-name"></span>
             <span id="user-email-display" class="user-email"></span>
           </div>
+          <span id="user-license-badge" class="user-license-badge hidden">Aktif</span>
           <button type="button" id="logout-btn" class="btn-logout-mini" title="Keluar dari Akun Gmail">Keluar</button>
         </div>
 
@@ -110,6 +111,64 @@
           <span>Lanjutkan dengan Akun Gmail</span>
         </button>
       </form>
+    </section>
+
+    <!-- ==========================================
+         VIEW 0B: AKTIVASI LISENSI AKUN GMAIL (VOC ML)
+         ========================================== -->
+    <section id="account-license-view" class="card license-lock-card hidden">
+      <div class="vault-gate">
+        <div class="vault-icon-ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h1 id="lic-title">Lisensi Akun Diperlukan</h1>
+        <p class="gate-subtitle" id="lic-subtitle">
+          Akun Gmail Anda telah terdaftar di sistem lisensi <strong>VOC ML</strong> dan sedang menunggu aktivasi.
+        </p>
+
+        <div class="lic-info-box">
+          <div class="lic-row">
+            <span class="lic-label">Akun Gmail:</span>
+            <span class="lic-value" id="lic-account-name">-</span>
+          </div>
+          <div class="lic-row">
+            <span class="lic-label">Status Lisensi:</span>
+            <span class="lic-value lic-reason" id="lic-reason-text">Menunggu Aktivasi Admin</span>
+          </div>
+          <div class="lic-row">
+            <span class="lic-label">ID Lisensi Akun (Machine ID):</span>
+            <div class="lic-mid-group">
+              <code id="lic-machine-id">GMAIL-...</code>
+              <button type="button" id="copy-mid-btn" class="btn-copy-mini">Salin ID</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kotak Tagihan QRIS Dinamis (Otomatis Muncul Jika Diatur di VOC ML) -->
+        <div id="lic-qris-box" class="lic-qris-box hidden">
+          <div class="qris-header">
+            <span class="qris-badge">TAGIHAN LISENSI QRIS</span>
+            <strong id="qris-amount" class="qris-amount">Rp 0</strong>
+          </div>
+          <p id="qris-merchant" class="qris-merchant"></p>
+          <div class="qris-img-wrap">
+            <img id="qris-img" src="" alt="QRIS Pembayaran Lisensi" />
+          </div>
+          <p id="qris-note" class="qris-note">Scan QRIS di atas menggunakan aplikasi Mobile Banking atau E-Wallet Anda.</p>
+        </div>
+
+        <div class="lic-polling-bar">
+          <span class="pulse-dot-red"></span>
+          <span>Memeriksa status aktivasi dari server pusat setiap 5 detik... Halaman akan terbuka otomatis setelah diaktifkan.</span>
+        </div>
+
+        <button type="button" id="switch-account-btn" class="btn btn-outline btn-block">
+          🔄 Ganti Akun Gmail Lain
+        </button>
+      </div>
     </section>
 
     <!-- ==========================================
