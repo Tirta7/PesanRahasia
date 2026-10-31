@@ -36,7 +36,7 @@ function resolveDefaultMachineId(envMachineId) {
 }
 
 const DEFAULT_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAdenKScMcRxd/GFPnwHLg026Y3mKWNmtyUR1KPQgLTFI=
+MCowBQYDK2VwAyEADenKScMcRxd/GFPnwHLgO26Y3mKwNmtyUR1KPQgLTFI=
 -----END PUBLIC KEY-----`;
 
 function getVocmlConfig() {
