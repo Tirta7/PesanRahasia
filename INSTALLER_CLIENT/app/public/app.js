@@ -21,15 +21,24 @@
   const logoutBtn = document.getElementById('logout-btn');
 
   const licAccountName = document.getElementById('lic-account-name');
+  const licTitle = document.getElementById('lic-title');
+  const licSubtitle = document.getElementById('lic-subtitle');
   const licReasonText = document.getElementById('lic-reason-text');
   const licMachineId = document.getElementById('lic-machine-id');
   const copyMidBtn = document.getElementById('copy-mid-btn');
+  const backToTrialBtn = document.getElementById('back-to-trial-btn');
   const switchAccountBtn = document.getElementById('switch-account-btn');
   const licQrisBox = document.getElementById('lic-qris-box');
   const qrisAmount = document.getElementById('qris-amount');
   const qrisMerchant = document.getElementById('qris-merchant');
   const qrisImg = document.getElementById('qris-img');
   const qrisNote = document.getElementById('qris-note');
+
+  const trialQuotaBanner = document.getElementById('trial-quota-banner');
+  const trialBannerTitle = document.getElementById('trial-banner-title');
+  const trialBannerSub = document.getElementById('trial-banner-sub');
+  const trialProgressFill = document.getElementById('trial-progress-fill');
+  const openUpgradeBtn = document.getElementById('open-upgrade-btn');
 
   const gmailLoginForm = document.getElementById('gmail-login-form');
   const loginNameInput = document.getElementById('login-name');
@@ -77,6 +86,7 @@
   let licensePollInterval = null;
   let isMessageActive = false;
   let currentUser = null;
+  let currentLicense = null;
 
   function getSessionToken() {
     try {
@@ -232,6 +242,7 @@
 
   function updateUserHeader(user, license) {
     currentUser = user;
+    currentLicense = license || currentLicense;
     if (user && user.email) {
       userNameDisplay.textContent = user.name || user.email.split('@')[0];
       userEmailDisplay.textContent = user.email;
@@ -242,20 +253,69 @@
       vaultPill.classList.add('hidden');
 
       if (userLicenseBadge) {
-        if (license && license.allowed) {
-          userLicenseBadge.textContent = license.daysLeft != null ? `✓ Aktif (${license.daysLeft} hr)` : '✓ Lisensi Aktif';
+        if (currentLicense && currentLicense.isTrial) {
+          userLicenseBadge.textContent = `🎁 Trial (${currentLicense.trialRemaining}/${currentLicense.trialLimit || 10})`;
+          userLicenseBadge.className = 'user-license-badge badge-trial';
+          userLicenseBadge.classList.remove('hidden');
+        } else if (currentLicense && currentLicense.allowed) {
+          userLicenseBadge.textContent =
+            currentLicense.daysLeft != null ? `✓ Pro (${currentLicense.daysLeft} hr)` : '✓ Lisensi Pro';
+          userLicenseBadge.className = 'user-license-badge';
+          userLicenseBadge.classList.remove('hidden');
+        } else if (currentLicense) {
+          userLicenseBadge.textContent = '🔒 Terkunci';
+          userLicenseBadge.className = 'user-license-badge badge-locked';
           userLicenseBadge.classList.remove('hidden');
         } else {
           userLicenseBadge.classList.add('hidden');
         }
       }
+
+      if (trialQuotaBanner) {
+        if (currentLicense && currentLicense.isTrial) {
+          const limit = currentLicense.trialLimit || 10;
+          const rem = currentLicense.trialRemaining ?? limit;
+          const pct = Math.max(8, Math.round((rem / limit) * 100));
+          trialBannerTitle.textContent = `Kuota Trial Gratis: Sisa ${rem} dari ${limit} Pesan`;
+          trialBannerSub.textContent = `ID Lisensi: ${currentLicense.machineId || '-'} • Setelah ${limit} pesan gratis, aktifkan Lisensi Pro Unlimited.`;
+          trialProgressFill.style.width = `${pct}%`;
+          trialQuotaBanner.classList.remove('hidden');
+        } else {
+          trialQuotaBanner.classList.add('hidden');
+        }
+      }
     } else {
       userProfilePill.classList.add('hidden');
       vaultPill.classList.remove('hidden');
+      if (trialQuotaBanner) trialQuotaBanner.classList.add('hidden');
     }
   }
 
   function renderAccountLicenseScreen(user, license) {
+    if (licTitle && licSubtitle) {
+      if (license?.status === 'trial_exhausted') {
+        licTitle.textContent = 'Kuota Trial 10x Pesan Habis';
+        licSubtitle.innerHTML =
+          'Anda telah menggunakan seluruh <strong>10x kuota pesan rahasia gratis</strong>. Untuk terus membuat pesan tanpa batas, aktifkan lisensi akun Anda di bawah ini.';
+      } else if (license?.isTrial) {
+        licTitle.textContent = 'Informasi Lisensi Akun Pro';
+        licSubtitle.innerHTML =
+          `Anda masih memiliki <strong>${license.trialRemaining} dari ${license.trialLimit || 10} kuota pesan gratis</strong>. Anda juga dapat mengaktifkan Lisensi Pro lebih awal.`;
+      } else {
+        licTitle.textContent = 'Aktivasi Lisensi Akun Diperlukan';
+        licSubtitle.innerHTML =
+          'Akun Gmail Anda telah terdaftar di sistem lisensi <strong>VOC ML</strong> dan sedang menunggu aktivasi.';
+      }
+    }
+
+    if (backToTrialBtn) {
+      if (license?.allowed && license?.isTrial) {
+        backToTrialBtn.classList.remove('hidden');
+      } else {
+        backToTrialBtn.classList.add('hidden');
+      }
+    }
+
     if (licAccountName) {
       licAccountName.textContent = `${user.name} (${user.email})`;
     }
@@ -300,10 +360,10 @@
         if (!res.ok) return;
         const data = await res.json();
         updateUserHeader(data.user, data.license);
-        if (data.license && data.license.allowed) {
+        if (data.license && data.license.allowed && !data.license.isTrial) {
           clearInterval(licensePollInterval);
           showView(createView);
-          showToast('🎉 Lisensi Akun Gmail Anda telah aktif! Silakan buat pesan rahasia.');
+          showToast('🎉 Lisensi Pro Akun Gmail Anda telah aktif! Silakan buat pesan tanpa batas.');
         } else if (data.license) {
           if (licReasonText) licReasonText.textContent = data.license.reason;
         }
@@ -318,14 +378,18 @@
     if (license && !license.allowed) {
       renderAccountLicenseScreen(user, license);
       if (isFreshLogin) {
-        showToast('🔒 Akun Gmail terdaftar! Menunggu aktivasi lisensi di VOC ML.');
+        showToast('🔒 Kuota Trial 10x pesan telah habis. Silakan aktifkan lisensi akun Anda.');
       }
       return;
     }
     clearInterval(licensePollInterval);
     showView(createView);
     if (isFreshLogin) {
-      showToast(`👋 Selamat datang, ${user.name}!`);
+      if (license && license.isTrial) {
+        showToast(`🎁 Selamat datang ${user.name}! Anda mendapat Trial Gratis (${license.trialRemaining}/${license.trialLimit || 10} pesan).`);
+      } else {
+        showToast(`👋 Selamat datang kembali, ${user.name}!`);
+      }
     }
   }
 
@@ -391,6 +455,21 @@
   if (switchAccountBtn) {
     switchAccountBtn.addEventListener('click', () => {
       if (logoutBtn) logoutBtn.click();
+    });
+  }
+
+  if (openUpgradeBtn) {
+    openUpgradeBtn.addEventListener('click', () => {
+      if (currentUser && currentLicense) {
+        renderAccountLicenseScreen(currentUser, currentLicense);
+      }
+    });
+  }
+
+  if (backToTrialBtn) {
+    backToTrialBtn.addEventListener('click', () => {
+      clearInterval(licensePollInterval);
+      showView(createView);
     });
   }
 
@@ -495,6 +574,10 @@
           throw new Error(data.error || 'Gagal menyimpan pesan rahasia.');
         }
 
+        if (data.user || data.license) {
+          updateUserHeader(data.user || currentUser, data.license || currentLicense);
+        }
+
         const baseUrl = (data.publicBaseUrl || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
         const secretUrl = `${baseUrl}/m/${data.id}#${encrypted.key}`;
         generatedLinkInput.value = secretUrl;
@@ -560,6 +643,11 @@
   if (createAnotherBtn) {
     createAnotherBtn.addEventListener('click', () => {
       generatedLinkInput.value = '';
+      if (currentLicense && !currentLicense.allowed) {
+        renderAccountLicenseScreen(currentUser, currentLicense);
+        showToast('🔒 Kuota Trial 10x pesan gratis Anda telah habis. Silakan aktifkan lisensi akun.');
+        return;
+      }
       showView(createView);
     });
   }

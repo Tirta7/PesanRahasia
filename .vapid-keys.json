@@ -1,0 +1,10 @@
+{
+  "publicKey": "BMc41qbPEZfrhiOz6vlil4CN_Q3RHgUgqGrDpuXagOAHQeQLsIKpbcbEitMTB2UQJFvZslPQ1EFXe7qTGl9XBYw",
+  "jwk": {
+    "kty": "EC",
+    "x": "xzjWps8Rl-uGI7Pq-WKXgI39DdEeBSCoasOm5dqA4Ac",
+    "y": "QeQLsIKpbcbEitMTB2UQJFvZslPQ1EFXe7qTGl9XBYw",
+    "crv": "P-256",
+    "d": "lksOo1G2WOH5Le3DlMcChKL6Ic-e8Z3gysX8CARfyPQ"
+  }
+}

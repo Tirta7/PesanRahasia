@@ -177,6 +177,10 @@
           <span>Memeriksa status aktivasi dari server pusat setiap 5 detik... Halaman akan terbuka otomatis setelah diaktifkan.</span>
         </div>
 
+        <button type="button" id="back-to-trial-btn" class="btn btn-primary btn-block hidden" style="margin-bottom:10px;">
+          ← Lanjut Gunakan Sisa Kuota Trial Gratis
+        </button>
+
         <button type="button" id="switch-account-btn" class="btn btn-outline btn-block">
           🔄 Ganti Akun Gmail Lain
         </button>
@@ -199,6 +203,25 @@
           <h1>Buat Pesan Rahasia</h1>
         </div>
         <p>Tulis pesan Anda, ubah menjadi link sekali pakai, dan kirimkan lewat WhatsApp atau aplikasi chat lainnya. Begitu dibuka, pesan otomatis <strong>dihancurkan selamanya</strong>.</p>
+      </div>
+
+      <!-- Info Kuota Trial 10x Pesan Gratis -->
+      <div id="trial-quota-banner" class="trial-quota-banner hidden">
+        <div class="trial-banner-top">
+          <div class="trial-banner-info">
+            <span class="trial-gift-icon">🎁</span>
+            <div>
+              <strong id="trial-banner-title">Kuota Trial Gratis: Sisa 10 dari 10 Pesan</strong>
+              <span id="trial-banner-sub" class="trial-banner-sub">ID Lisensi: GMAIL-... • Setelah 10 pesan, aktifkan lisensi Pro Unlimited.</span>
+            </div>
+          </div>
+          <button type="button" id="open-upgrade-btn" class="btn-upgrade-mini">
+            🔑 Info Lisensi Pro
+          </button>
+        </div>
+        <div class="trial-progress-track">
+          <div id="trial-progress-fill" class="trial-progress-fill" style="width: 100%;"></div>
+        </div>
       </div>
 
       <form id="create-form" autocomplete="off">

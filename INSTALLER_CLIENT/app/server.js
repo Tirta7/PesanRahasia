@@ -377,7 +377,11 @@ const server = http.createServer(async (req, res) => {
 
       for (const u of targetUsers) {
         try {
-          const lic = await verifyUserAccountLicense({ email: u.email, name: u.name });
+          const lic = await verifyUserAccountLicense({
+            email: u.email,
+            name: u.name,
+            messagesCreated: u.messagesCreated
+          });
           await updateUserLicenseInDb({
             email: u.email,
             machineId: lic.machineId,
@@ -539,13 +543,35 @@ const server = http.createServer(async (req, res) => {
         expiresAt
       });
 
+      user.messagesCreated = (Number(user.messagesCreated) || 0) + 1;
+      const updatedLicense = await verifyUserAccountLicense(user);
+      await updateUserLicenseInDb({
+        email: user.email,
+        machineId: updatedLicense.machineId,
+        status: updatedLicense.status,
+        expiresAt: updatedLicense.expiresAt
+      });
+
+      if (updatedLicense.status === 'trial_exhausted') {
+        broadcastWebPushToAdmins({
+          title: '🛑 Kuota Trial 10x Habis (Siap Upgrade)!',
+          body: `${user.name} (${user.email}) telah memakai 10/10 pesan gratis.\nID Lisensi: ${updatedLicense.machineId}`,
+          url: '/admin',
+          email: user.email,
+          machineId: updatedLicense.machineId,
+          tag: `trial-exhausted-${user.email}`
+        });
+      }
+
       return sendJson(res, 201, {
         id,
         publicBaseUrl: PUBLIC_BASE_URL,
         expiresAt,
         protectionMode: validMode,
         viewTimerSeconds: validTimer,
-        storage: getStorageEngineName()
+        storage: getStorageEngineName(),
+        user,
+        license: updatedLicense
       });
     }
 

@@ -971,6 +971,95 @@ input[type="password"]:focus {
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 999px;
+  white-space: nowrap;
+}
+
+.user-license-badge.badge-trial {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.42);
+  color: #fcd34d;
+}
+
+.user-license-badge.badge-locked {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.42);
+  color: #fca5a5;
+}
+
+/* Trial 10x Pesan Gratis Banner */
+.trial-quota-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(16, 185, 129, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 14px;
+  padding: 13px 15px;
+  margin-bottom: 18px;
+}
+
+.trial-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.trial-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trial-gift-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.trial-banner-info strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #fde68a;
+}
+
+.trial-banner-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.btn-upgrade-mini {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+  font-size: 0.73rem;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 6px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.btn-upgrade-mini:hover {
+  background: #f59e0b;
+  color: #07090e;
+}
+
+.trial-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.trial-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #f59e0b);
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }
 
 .license-lock-card {
@@ -1128,5 +1217,133 @@ input[type="password"]:focus {
   font-weight: 600;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
   z-index: 100;
+  max-width: calc(100vw - 32px);
+  text-align: center;
 }
+
+/* ============================================================================
+   RESPONSIVE DESIGN KHUSUS MOBILE & TABLET
+   ============================================================================ */
+@media (max-width: 640px) {
+  .app-container {
+    padding: 14px 12px 32px;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .brand {
+    justify-content: space-between;
+  }
+
+  .header-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .user-profile-pill {
+    width: 100%;
+    justify-content: space-between;
+    padding: 7px 10px;
+  }
+
+  .user-meta {
+    max-width: 125px;
+    overflow: hidden;
+  }
+
+  .user-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card {
+    padding: 18px 15px;
+    border-radius: 16px;
+  }
+
+  .card-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .card-header p {
+    font-size: 0.83rem;
+    margin-bottom: 16px;
+  }
+
+  .trial-banner-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-upgrade-mini {
+    width: 100%;
+    text-align: center;
+  }
+
+  .options-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .security-features-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .link-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .link-input-row input,
+  .link-input-row .btn {
+    width: 100%;
+  }
+
+  .share-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .lic-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .lic-mid-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .reader-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mode-switch {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .toast {
+    bottom: 16px;
+    font-size: 0.8rem;
+    padding: 10px 16px;
+    border-radius: 14px;
+  }
+}
+
 

@@ -320,3 +320,4 @@ export function generatePwaIconPng(size = 192) {
   iconCache.set(size, png);
   return png;
 }
+

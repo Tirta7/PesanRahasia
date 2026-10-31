@@ -710,6 +710,91 @@
       box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55);
       z-index: 2000;
       transition: all 0.25s ease;
+      max-width: calc(100vw - 32px);
+    }
+
+    /* Responsive Mobile & Tablet untuk Dashboard Admin PWA */
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px 12px 48px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 15px;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .topbar-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        width: 100%;
+      }
+
+      .topbar-actions .btn {
+        width: 100%;
+        padding: 9px 10px;
+        font-size: 0.76rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .stat-card {
+        padding: 14px 15px;
+      }
+
+      .stat-value {
+        font-size: 1.55rem;
+      }
+
+      .section-card {
+        padding: 16px 14px;
+        border-radius: 16px;
+      }
+
+      .toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .filter-pills {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .search-group,
+      .search-box {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .modal-card {
+        padding: 18px 15px;
+      }
+
+      .toast {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar-actions {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -868,9 +953,9 @@
         <div class="toolbar-row">
           <div class="filter-pills" id="user-filter-pills">
             <button type="button" class="filter-pill active" data-filter="all">Semua Pengguna</button>
-            <button type="button" class="filter-pill" data-filter="active">✅ Lisensi Aktif</button>
-            <button type="button" class="filter-pill" data-filter="pending">⏳ Menunggu Aktivasi</button>
-            <button type="button" class="filter-pill" data-filter="expired">⌛ Habis / Terkunci</button>
+            <button type="button" class="filter-pill" data-filter="active">✅ Lisensi Pro</button>
+            <button type="button" class="filter-pill" data-filter="pending">🎁 Trial Gratis (10x)</button>
+            <button type="button" class="filter-pill" data-filter="expired">🛑 Trial Habis / Terkunci</button>
           </div>
 
           <div class="search-group">
@@ -1255,9 +1340,12 @@
 
       function licenseBadgeHtml(u) {
         const st = u.licenseStatus || 'pending';
+        const used = Number(u.messagesCreated) || 0;
+        const rem = Math.max(0, 10 - used);
+
         if (st === 'active' || st === 'expiring') {
           return `
-            <span class="badge badge-active">✅ Lisensi Aktif</span>
+            <span class="badge badge-active">✅ Lisensi Pro Aktif</span>
             <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
           `;
         }
@@ -1273,9 +1361,15 @@
             <span class="sub-detail">Perlu dibuka di VOC ML</span>
           `;
         }
+        if (used >= 10 || st === 'trial_exhausted') {
+          return `
+            <span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>
+            <span class="sub-detail">Menunggu aktivasi berbayar</span>
+          `;
+        }
         return `
-          <span class="badge badge-pending">⏳ Menunggu Aktivasi</span>
-          <span class="sub-detail">Aktifkan di vocml.vocpos.id</span>
+          <span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>
+          <span class="sub-detail">Sisa ${rem} pesan gratis</span>
         `;
       }
 
@@ -1283,9 +1377,10 @@
         const q = userSearchInput.value.trim().toLowerCase();
         const filtered = allUsers.filter((u) => {
           const st = u.licenseStatus || 'pending';
+          const used = Number(u.messagesCreated) || 0;
           if (activeUserFilter === 'active' && st !== 'active' && st !== 'expiring') return false;
-          if (activeUserFilter === 'pending' && st !== 'pending') return false;
-          if (activeUserFilter === 'expired' && st !== 'expired' && st !== 'locked') return false;
+          if (activeUserFilter === 'pending' && (st === 'active' || st === 'expiring' || st === 'expired' || st === 'locked' || used >= 10)) return false;
+          if (activeUserFilter === 'expired' && st !== 'expired' && st !== 'locked' && st !== 'trial_exhausted' && used < 10) return false;
 
           if (!q) return true;
           return (
