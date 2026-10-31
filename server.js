@@ -494,6 +494,11 @@ const server = http.createServer(async (req, res) => {
       return serveStaticFile(res, path.join(PUBLIC_DIR, 'admin.html'));
     }
 
+    // Rute Favicon: /favicon.ico -> Sajikan favicon.svg
+    if (req.method === 'GET' && pathname === '/favicon.ico') {
+      return serveStaticFile(res, path.join(PUBLIC_DIR, 'favicon.svg'));
+    }
+
     // 5. Rute halaman baca pesan: /m/:id -> Sajikan index.html
     if (req.method === 'GET' && /^\/m\/[A-Za-z0-9_-]+$/.test(pathname)) {
       return serveStaticFile(res, path.join(PUBLIC_DIR, 'index.html'));

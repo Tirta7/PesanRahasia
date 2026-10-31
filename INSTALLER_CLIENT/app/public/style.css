@@ -200,10 +200,36 @@ body {
   display: none !important;
 }
 
+.card-title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 8px;
+}
+
+.title-logo-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.42);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.22);
+  flex-shrink: 0;
+}
+
+.title-logo-badge svg {
+  width: 18px;
+  height: 18px;
+}
+
 .card-header h1 {
   font-size: 1.5rem;
   font-weight: 800;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   letter-spacing: -0.02em;
 }
 
