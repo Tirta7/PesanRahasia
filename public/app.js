@@ -35,6 +35,9 @@
   const qrisMerchant = document.getElementById('qris-merchant');
   const qrisImg = document.getElementById('qris-img');
   const qrisNote = document.getElementById('qris-note');
+  const btnCekBayar = document.getElementById('btnCekBayar');
+  const statusTeks = document.getElementById('statusTeks');
+  const licDefaultPolling = document.getElementById('lic-default-polling');
 
   const trialQuotaBanner = document.getElementById('trial-quota-banner');
   const trialBannerTitle = document.getElementById('trial-banner-title');
@@ -464,46 +467,88 @@
         b.qris_image_url ||
         `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(b.qris)}`;
       if (b.note) qrisNote.textContent = b.note;
+      if (btnCekBayar) btnCekBayar.style.display = 'inline-flex';
       licQrisBox.classList.remove('hidden');
+      if (licDefaultPolling) licDefaultPolling.classList.add('hidden');
     } else if (licQrisBox) {
       licQrisBox.classList.add('hidden');
+      if (licDefaultPolling) licDefaultPolling.classList.remove('hidden');
     }
 
     showView(accountLicenseView);
     startLicensePolling();
   }
 
-  function startLicensePolling() {
-    clearInterval(licensePollInterval);
-    licensePollInterval = setInterval(async () => {
+    let isCheckingPayStatus = false;
+    async function cekStatusBayar(isManualClick = false) {
+      if (isCheckingPayStatus) return;
+      isCheckingPayStatus = true;
       const token = getSessionToken();
       if (!token) {
         clearInterval(licensePollInterval);
+        isCheckingPayStatus = false;
         return;
       }
+
+      if (isManualClick && btnCekBayar) {
+        btnCekBayar.innerText = "⏳ Sedang Memeriksa Server...";
+        btnCekBayar.disabled = true;
+      }
+
       try {
-        const res = await fetch('/api/auth/me', {
+        const url = isManualClick ? '/api/check-license?fresh=1' : '/api/check-license';
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store'
         });
         if (!res.ok) return;
         const data = await res.json();
-        updateUserHeader(data.user, data.license);
-        if (data.license && data.license.allowed && (!data.license.isTrial || accountLicenseView.classList.contains('hidden') === false)) {
-          if (!data.license.isTrial || (currentLicense && !currentLicense.allowed && data.license.allowed)) {
-            clearInterval(licensePollInterval);
+        if (data.user && data.license) {
+          updateUserHeader(data.user, data.license);
+        }
+
+        // Jika lisensi sudah aktif / di-generate di VOC ML
+        if (data.status === 'active' || data.allowed === true || data.locked === 0) {
+          if (statusTeks) {
+            statusTeks.innerHTML = "<b style='color:#10B981;'>🎉 Pembayaran Berhasil Diterima! Membuka aplikasi...</b>";
+          }
+          if (btnCekBayar) btnCekBayar.style.display = 'none';
+          clearInterval(licensePollInterval);
+          showToast('🎉 Pembayaran diterima! Lisensi Anda telah aktif.');
+          setTimeout(() => {
             showView(createView);
             loadMyMessages();
-            showToast('🎉 Akun Gmail Anda telah aktif! Silakan buat pesan rahasia.');
-          }
-        } else if (data.license && licReasonText) {
+          }, 600);
+          return;
+        }
+
+        if (isManualClick && statusTeks) {
+          statusTeks.innerHTML = "<span style='color:#F59E0B;'>⚠️ Pembayaran belum terdeteksi di mutasi VOC ML. Pastikan sudah klik Generate Key di VOC ML, lalu coba lagi.</span>";
+        }
+        if (data.license && licReasonText) {
           licReasonText.textContent = data.license.reason;
         }
-      } catch {
-        // Abaikan error jaringan sementara
+      } catch (err) {
+        console.error("Gagal memeriksa status lisensi:", err);
+      } finally {
+        isCheckingPayStatus = false;
+        if (isManualClick && btnCekBayar) {
+          btnCekBayar.innerText = "✅ Saya Sudah Bayar (Buka Sekarang)";
+          btnCekBayar.disabled = false;
+        }
       }
-    }, 5000);
-  }
+    }
+
+    if (btnCekBayar) {
+      btnCekBayar.onclick = () => cekStatusBayar(true);
+    }
+
+    function startLicensePolling() {
+      clearInterval(licensePollInterval);
+      cekStatusBayar(false);
+      // Interval otomatis dipercepat menjadi SETIAP 2 DETIK (2000 ms)
+      licensePollInterval = setInterval(() => cekStatusBayar(false), 2000);
+    }
 
   // ============================================================================
   // 2B. RIWAYAT LINK PESAN PENGIRIM & WEB PUSH READ-RECEIPT

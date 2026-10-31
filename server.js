@@ -365,20 +365,34 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (req.method === 'GET' && pathname === '/api/auth/me') {
+    if (req.method === 'GET' && (pathname === '/api/auth/me' || pathname === '/api/check-license')) {
       const token = getBearerToken(req);
       const user = await getUserBySessionToken(token);
       if (!user) {
-        return sendJson(res, 401, { authenticated: false });
+        return sendJson(res, 401, { authenticated: false, allowed: false });
       }
-      const license = await verifyUserAccountLicense(user);
+      const shouldBypass = parsedUrl.searchParams.get('fresh') === '1' || pathname === '/api/check-license';
+      if (shouldBypass) {
+        invalidateUserLicenseCache(user.email);
+      }
+      const license = await verifyUserAccountLicense({
+        ...user,
+        bypassCache: shouldBypass
+      });
       await updateUserLicenseInDb({
         email: user.email,
         machineId: license.machineId,
         status: license.status,
         expiresAt: license.expiresAt
       });
-      return sendJson(res, 200, { authenticated: true, user, license });
+      return sendJson(res, 200, {
+        authenticated: true,
+        user,
+        license,
+        status: license.status,
+        allowed: license.allowed,
+        locked: !license.allowed ? 1 : 0
+      });
     }
 
     if (req.method === 'POST' && pathname === '/api/auth/google') {

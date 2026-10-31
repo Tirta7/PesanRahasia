@@ -1254,6 +1254,11 @@ input[type="password"]:focus {
   flex-shrink: 0;
 }
 
+.pulse-dot-amber {
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
 .toast {
   position: fixed;
   bottom: 24px;

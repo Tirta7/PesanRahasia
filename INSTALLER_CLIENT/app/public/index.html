@@ -175,12 +175,26 @@
           </div>
           <p id="qris-note" class="qris-note">Scan QRIS di atas menggunakan aplikasi Mobile Banking atau E-Wallet Anda.
           </p>
+
+          <!-- Tombol Saya Sudah Bayar & Animasi Status -->
+          <div style="margin-top: 15px; text-align: center;">
+            <button type="button" id="btnCekBayar" class="btn btn-primary btn-block" style="
+              box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+              font-size: 0.9rem;
+              padding: 12px 18px;
+            ">
+              ✅ Saya Sudah Bayar (Buka Sekarang)
+            </button>
+            <div id="statusTeks" style="margin-top: 10px; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span class="pulse-dot-amber" style="display:inline-block; width:8px; height:8px; background:#f59e0b; border-radius:50%; box-shadow:0 0 8px #f59e0b;"></span>
+              <span>Menunggu pembayaran masuk... (dicek otomatis tiap 2 detik)</span>
+            </div>
+          </div>
         </div>
 
-        <div class="lic-polling-bar">
+        <div class="lic-polling-bar" id="lic-default-polling">
           <span class="pulse-dot-red"></span>
-          <span>Memeriksa status aktivasi dari server pusat setiap 5 detik... Halaman akan terbuka otomatis setelah
-            diaktifkan.</span>
+          <span>Memeriksa status aktivasi dari server pusat tiap 2 detik... Halaman akan terbuka otomatis setelah diaktifkan.</span>
         </div>
 
         <div class="lic-actions-stack">
