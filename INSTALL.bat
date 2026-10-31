@@ -55,8 +55,9 @@ if not exist ".env" (
       echo PGDATABASE=pesan_rahasia
       echo STORE_NAME=!INPUT_STORE!
       echo VOCML_ENABLED=true
+      echo VOCML_PRODUCT=pos
       echo VOCML_MACHINE_ID=%MACHINE_ID%
-      echo VOCML_SERVER_URL=https://lisensi.vocpos.id
+      echo VOCML_SERVER_URL=https://vocml.vocpos.id
     ) > .env
     echo [OK] File .env berhasil dibuat dengan Machine ID otomatis.
 ) else (

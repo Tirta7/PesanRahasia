@@ -37,8 +37,8 @@ services:
       - PGDATABASE=${PGDATABASE:-pesan_rahasia}
       - STORE_NAME=${STORE_NAME:-Cabang Utama}
       - VOCML_ENABLED=${VOCML_ENABLED:-true}
-      - VOCML_SERVER_URL=${VOCML_SERVER_URL:-https://lisensi.vocpos.id}
-      - VOCML_PRODUCT=pesan-rahasia
+      - VOCML_SERVER_URL=${VOCML_SERVER_URL:-https://vocml.vocpos.id}
+      - VOCML_PRODUCT=pos
       - VOCML_MACHINE_ID=${VOCML_MACHINE_ID:-}
       - VOCML_CACHE_FILE=/data/license-cache.json
     volumes:

@@ -7,3 +7,4 @@ pgdata/
 INSTALLER_CLIENT/data/
 INSTALLER_CLIENT/pgdata/
 *.log
+
