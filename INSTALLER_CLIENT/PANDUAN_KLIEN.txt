@@ -1,0 +1,11 @@
+============================================================
+PANDUAN INSTALASI KLIEN - PESANRAHASIA (DOCKER + POSTGRESQL)
+============================================================
+
+1. Pastikan Docker Desktop sudah terinstal dan berstatus "Running".
+2. Klik 2x pada file "INSTALL.bat".
+3. Masukkan Nama Cabang / Toko Anda saat diminta.
+4. Sistem akan otomatis menjalankan database PostgreSQL dan Aplikasi PesanRahasia di port 3006.
+5. Catat Machine ID yang tampil di layar dan kirimkan ke Admin Pusat VOC ML untuk aktivasi lisensi.
+6. Untuk memperbarui aplikasi di kemudian hari, cukup klik 2x "UPDATE.bat".
+

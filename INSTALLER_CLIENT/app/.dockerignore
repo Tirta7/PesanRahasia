@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+data
+pgdata
+INSTALLER_CLIENT/data
+INSTALLER_CLIENT/pgdata
+

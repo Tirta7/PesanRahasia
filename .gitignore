@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+.env
+INSTALLER_CLIENT/.env
+data/
+pgdata/
+INSTALLER_CLIENT/data/
+INSTALLER_CLIENT/pgdata/
+*.log

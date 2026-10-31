@@ -1,0 +1,5 @@
+{
+  "name": "vocml-client-sdk",
+  "type": "module",
+  "private": true
+}

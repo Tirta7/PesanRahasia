@@ -1,0 +1,30 @@
+{
+  "name": "pesan-rahasia",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Aplikasi web pengirim pesan rahasia sekali baca (Self-Destructing End-to-End Encrypted Secret Message) dengan PostgreSQL, Docker & Sistem Lisensi VOC ML.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "tunnel": "cloudflared tunnel --url http://localhost:3006"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "secret-message",
+    "burn-after-reading",
+    "e2ee",
+    "postgresql",
+    "docker",
+    "vocml",
+    "pesan-rahasia"
+  ],
+  "license": "MIT"
+}

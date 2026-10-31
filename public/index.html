@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PesanRahasia — Kirim Pesan Sekali Baca & Anti-Screenshot</title>
+  <meta name="description" content="Kirim pesan rahasia terenkripsi End-to-End yang otomatis hancur setelah dibaca satu kali." />
+  <meta property="og:title" content="🔒 Anda Menerima Pesan Rahasia Sekali Baca" />
+  <meta property="og:description" content="Pesan ini terenkripsi End-to-End dan otomatis hancur selamanya setelah dibuka satu kali." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="no-select">
+  <!-- Background Ambient Glow -->
+  <div class="ambient-bg">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <a href="/" class="brand" title="Buat Pesan Rahasia Baru">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <circle cx="12" cy="16" r="1"></circle>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">PesanRahasia</span>
+          <span class="brand-badge">E2EE • Sekali Baca</span>
+        </div>
+      </a>
+      <div class="security-pill">
+        <span class="pulse-dot"></span>
+        <span>Zero-Knowledge Vault</span>
+      </div>
+    </header>
+
+    <!-- ==========================================
+         VIEW 1: BUAT PESAN RAHASIA (SENDER)
+         ========================================== -->
+    <main id="create-view" class="card">
+      <div class="card-header">
+        <h1>Buat Pesan Rahasia</h1>
+        <p>Tulis pesan Anda, ubah menjadi link sekali pakai, dan kirimkan lewat WhatsApp atau aplikasi chat lainnya. Begitu dibuka, pesan otomatis <strong>dihancurkan selamanya</strong>.</p>
+      </div>
+
+      <form id="create-form" autocomplete="off">
+        <div class="form-group">
+          <div class="label-row">
+            <label for="secret-input">Isi Pesan Rahasia</label>
+            <span id="char-counter" class="char-counter">0 / 5.000 karakter</span>
+          </div>
+          <div class="textarea-wrapper">
+            <textarea
+              id="secret-input"
+              rows="6"
+              maxlength="5000"
+              placeholder="Ketik pesan rahasia, password, PIN, atau informasi sensitif di sini..."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Pengaturan Proteksi -->
+        <div class="options-grid">
+          <div class="option-box">
+            <label for="protection-mode">Mode Anti-Screenshot</label>
+            <select id="protection-mode">
+              <option value="spotlight" selected>🔦 Spotlight (Lubang Intip Anti-Screenshot)</option>
+              <option value="hold">👆 Tahan Layar untuk Membaca (Press & Hold)</option>
+            </select>
+            <small class="option-hint">Mencegah seluruh isi pesan terlihat sekaligus saat di-screenshot.</small>
+          </div>
+
+          <div class="option-box">
+            <label for="view-timer">Waktu Tampil Setelah Dibuka</label>
+            <select id="view-timer">
+              <option value="30">⏱️ 30 Detik (Sangat Ketat)</option>
+              <option value="60" selected>⏱️ 60 Detik (Rekomendasi)</option>
+              <option value="120">⏱️ 2 Menit</option>
+              <option value="300">⏱️ 5 Menit</option>
+            </select>
+            <small class="option-hint">Layar otomatis bersih saat waktu habis.</small>
+          </div>
+        </div>
+
+        <div class="security-features-bar">
+          <div class="sec-item">
+            <span class="sec-icon">🔥</span>
+            <span>Hancur Otomatis 1x Klik</span>
+          </div>
+          <div class="sec-item">
+            <span class="sec-icon">🔐</span>
+            <span>Enkripsi AES-256 di Browser</span>
+          </div>
+          <div class="sec-item">
+            <span class="sec-icon">🛡️</span>
+            <span>Sensor Anti-Screenshot & Blur</span>
+          </div>
+        </div>
+
+        <button type="submit" id="generate-btn" class="btn btn-primary btn-block">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span>Buat Link Pesan Rahasia</span>
+        </button>
+      </form>
+    </main>
+
+    <!-- ==========================================
+         VIEW 2: LINK BERHASIL DIBUAT (SHARE)
+         ========================================== -->
+    <section id="share-view" class="card hidden">
+      <div class="status-banner success">
+        <div class="status-icon">✓</div>
+        <div>
+          <h2>Link Pesan Rahasia Siap Dikirim!</h2>
+          <p>Jangan buka link ini sendiri agar pesan tidak langsung hangus terpakai.</p>
+        </div>
+      </div>
+
+      <div class="link-box-group">
+        <label>Link Sekali Buka (Terenkripsi End-to-End)</label>
+        <div class="link-input-row">
+          <input type="text" id="generated-link" readonly />
+          <button type="button" id="copy-link-btn" class="btn btn-secondary">
+            <span id="copy-btn-text">Salin Link</span>
+          </button>
+        </div>
+        <p class="warning-note">
+          ⚠️ <strong>Penting:</strong> Kunci dekripsi ada di bagian akhir link (setelah tanda <code>#</code>) dan tidak pernah disimpan di server.
+        </p>
+      </div>
+
+      <div class="share-actions">
+        <a id="whatsapp-share-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-block">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.53 5.862l-1.53 5.588 5.736-1.504c1.693.924 3.633 1.454 5.702 1.454 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+          </svg>
+          <span>Kirim ke WhatsApp</span>
+        </a>
+
+        <button type="button" id="native-share-btn" class="btn btn-outline btn-block">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+          <span>Bagikan ke Aplikasi Lain (Telegram, Line, dll)</span>
+        </button>
+
+        <button type="button" id="create-another-btn" class="btn btn-ghost btn-block">
+          + Buat Pesan Rahasia Baru
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 3: KONFIRMASI BUKA PESAN (RECIPIENT GATE)
+         ========================================== -->
+    <section id="gate-view" class="card hidden">
+      <div class="vault-gate">
+        <div class="vault-icon-ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h1>Anda Menerima Pesan Rahasia</h1>
+        <p class="gate-subtitle">
+          Pesan ini dilindungi enkripsi End-to-End dan <strong>hanya bisa dibuka satu kali saja</strong>.
+        </p>
+
+        <div class="rules-card">
+          <h3>⚠️ Peraturan Keamanan Sekali Baca:</h3>
+          <ul>
+            <li>Begitu tombol di bawah diklik, pesan <strong>langsung dihapus permanen dari server</strong> dan link ini tidak akan bisa dibuka lagi untuk kedua kalinya.</li>
+            <li>Dilengkapi <strong>Proteksi Anti-Screenshot</strong> (Spotlight / Tahan Layar & Auto-Blur saat pindah aplikasi/tab).</li>
+            <li>Pastikan tidak ada orang lain yang mengintip layar Anda saat ini.</li>
+          </ul>
+        </div>
+
+        <button type="button" id="reveal-confirm-btn" class="btn btn-danger-glow btn-block">
+          🔓 Buka & Hancurkan Pesan Sekarang
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 4: TAMPILAN PESAN RAHASIA (ANTI-SCREENSHOT)
+         ========================================== -->
+    <section id="secret-view" class="card hidden">
+      <div class="secret-top-bar">
+        <div class="destroyed-badge">
+          <span class="fire-dot">🔥</span>
+          <span>Telah Dihancurkan dari Server (Tidak Bisa Dibuka Lagi)</span>
+        </div>
+        <div class="countdown-pill" id="countdown-pill">
+          <span>Layar bersih dalam:</span>
+          <strong id="countdown-timer">60d</strong>
+        </div>
+      </div>
+
+      <!-- Mode Switcher untuk Pembaca -->
+      <div class="reader-controls">
+        <span class="reader-hint" id="reader-instruction">
+          🔦 Geser jari / kursor di atas kotak di bawah untuk menyinari isi pesan:
+        </span>
+        <div class="mode-toggle-group">
+          <button type="button" id="mode-spotlight-btn" class="chip active">🔦 Spotlight</button>
+          <button type="button" id="mode-hold-btn" class="chip">👆 Tahan Tombol</button>
+        </div>
+      </div>
+
+      <!-- Kotak Pesan Anti-Screenshot -->
+      <div id="secret-stage" class="secret-stage mode-spotlight">
+        <!-- Lapisan Watermark Dinamis -->
+        <div id="watermark-layer" class="watermark-layer" aria-hidden="true"></div>
+
+        <!-- Lapisan Blur (Background) -->
+        <div id="secret-text-blurred" class="secret-content blurred-layer" aria-hidden="true"></div>
+
+        <!-- Lapisan Terbuka dengan Masker Spotlight / Press-Hold -->
+        <div id="secret-text-clear" class="secret-content clear-layer"></div>
+
+        <!-- Perisai Anti-Screenshot / Kehilangan Fokus -->
+        <div id="privacy-shield" class="privacy-shield">
+          <div class="shield-inner">
+            <div class="shield-icon">🛡️</div>
+            <h3 id="shield-title">Layar Terkunci (Proteksi Anti-Screenshot)</h3>
+            <p id="shield-desc">Sentuh & geser di area ini (atau tahan tombol di bawah) untuk membaca pesan rahasia.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tombol Tahan untuk Baca (Muncul saat mode Hold atau di Mobile) -->
+      <button type="button" id="hold-to-read-btn" class="btn btn-hold btn-block">
+        👆 Tahan Tombol Ini Untuk Membuka Blur
+      </button>
+
+      <div class="secret-footer-actions">
+        <button type="button" id="burn-now-btn" class="btn btn-danger-outline btn-block">
+          🗑️ Bersihkan Layar & Hancurkan Sekarang
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 5: PESAN SUDAH HANCUR / TIDAK DITEMUKAN
+         ========================================== -->
+    <section id="destroyed-view" class="card hidden">
+      <div class="destroyed-state">
+        <div class="destroyed-icon">💨</div>
+        <h1 id="destroyed-title">Pesan Sudah Hancur</h1>
+        <p id="destroyed-message">
+          Link pesan rahasia ini sudah pernah dibuka sebelumnya dan <strong>telah dihancurkan secara permanen</strong>, atau link sudah kedaluwarsa. Demi privasi, pesan tidak dapat dipulihkan.
+        </p>
+        <a href="/" class="btn btn-primary">
+          🔒 Buat Pesan Rahasia Baru
+        </a>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      <p>🔒 <strong>PesanRahasia</strong> • Enkripsi End-to-End • Tanpa Log • Otomatis Hancur Sekali Buka</p>
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pesanrahasia_client_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
+      POSTGRES_DB: ${PGDATABASE:-pesan_rahasia}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-pesan_rahasia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ${APP_IMAGE:-ghcr.io/tirtaaditya/pesan-rahasia:latest}
+    container_name: pesanrahasia_client_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3006}:3006"
+    environment:
+      - PORT=3006
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://privatmassage.vocpos.id}
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGUSER=${PGUSER:-postgres}
+      - PGPASSWORD=${PGPASSWORD:-postgres}
+      - PGDATABASE=${PGDATABASE:-pesan_rahasia}
+      - STORE_NAME=${STORE_NAME:-Cabang Utama}
+      - VOCML_ENABLED=${VOCML_ENABLED:-true}
+      - VOCML_SERVER_URL=${VOCML_SERVER_URL:-https://lisensi.vocpos.id}
+      - VOCML_PRODUCT=pesan-rahasia
+      - VOCML_MACHINE_ID=${VOCML_MACHINE_ID:-}
+      - VOCML_CACHE_FILE=/data/license-cache.json
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3006/api/health || exit 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
