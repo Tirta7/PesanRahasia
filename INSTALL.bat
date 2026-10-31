@@ -44,7 +44,7 @@ echo [OK] Machine ID terdeteksi: %MACHINE_ID%
 echo [3/5] Menyiapkan konfigurasi outlet ^& PostgreSQL...
 if not exist ".env" (
     echo Masukkan Nama Cabang / Toko ini:
-    set /p "INPUT_STORE=Nama Outlet (contoh: PesanRahasiaPekalongan): "
+    set /p "INPUT_STORE=Nama Outlet (contoh: Cabang Utama VOCPOS): "
     if "!INPUT_STORE!"=="" set "INPUT_STORE=Cabang Baru"
 
     (
@@ -54,30 +54,25 @@ if not exist ".env" (
       echo PGPASSWORD=postgres
       echo PGDATABASE=pesan_rahasia
       echo STORE_NAME=!INPUT_STORE!
-      echo VOCML_ENABLED=false
+      echo VOCML_ENABLED=true
       echo VOCML_MACHINE_ID=%MACHINE_ID%
       echo VOCML_SERVER_URL=https://lisensi.vocpos.id
-      echo GHCR_IMAGE=ghcr.io/tirtaaditya/pesan-rahasia:latest
     ) > .env
     echo [OK] File .env berhasil dibuat dengan Machine ID otomatis.
 ) else (
     echo [OK] File .env sudah ada.
 )
 
-:: 5. Download Image PostgreSQL & Siapkan Image Aplikasi (Cloud GHCR atau Local Build Fallback)
+:: 5. Download Image Terbaru & Start PostgreSQL + App
 echo.
-echo [4/5] Mengunduh image database PostgreSQL (postgres:16-alpine)...
+echo [4/5] Mengunduh versi aplikasi ^& PostgreSQL terbaru dari cloud...
 docker pull postgres:16-alpine
-
-echo.
-echo [INFO] Memeriksa image cloud di GitHub Container Registry...
-docker pull ghcr.io/tirtaaditya/pesan-rahasia:latest >nul 2>&1
+docker pull ghcr.io/tirta7/pesanrahasia:latest >nul 2>&1
 if %errorlevel% equ 0 (
-    echo [OK] Image cloud berhasil diunduh dari ghcr.io!
-    docker tag ghcr.io/tirtaaditya/pesan-rahasia:latest pesanrahasia_app:latest
+    echo [OK] Image cloud ghcr.io/tirta7/pesanrahasia:latest berhasil diunduh!
     set "BUILD_FLAG="
 ) else (
-    echo [INFO] Image belum tersedia di ghcr.io, mem-build image langsung secara lokal...
+    echo [WARNING] Image cloud belum siap/masih private, mem-build otomatis dari lokal...
     set "BUILD_FLAG=--build"
 )
 
@@ -85,26 +80,21 @@ echo.
 echo [5/5] Memulai kontainer PostgreSQL ^& Aplikasi PesanRahasia...
 docker compose down >nul 2>&1
 docker compose up -d %BUILD_FLAG%
-if %errorlevel% neq 0 (
-    echo.
-    echo [ERROR] Gagal menjalankan kontainer Docker. Periksa pesan error di atas.
-    pause
-    exit /b 1
-)
 
 echo.
-echo Menunggu inisialisasi PostgreSQL ^& aplikasi (8 detik)...
-timeout /t 8 /nobreak >nul
+echo Menunggu inisialisasi PostgreSQL ^& aplikasi (10 detik)...
+timeout /t 10 /nobreak >nul
 
 echo.
 echo ============================================================
-echo   INSTALASI SELESAI ^& KONTAINER BERJALAN!
+echo   INSTALASI SELESAI!
 echo   URL Lokal               : http://localhost:3006
 echo   Domain Publik           : https://privatmassage.vocpos.id
-echo   Database PostgreSQL     : Aktif (Port Eksternal 5433 -^> 5432)
 echo   Machine ID Komputer ini : %MACHINE_ID%
+echo   Daftarkan Machine ID di atas pada Dashboard VOC ML Anda.
 echo ============================================================
 echo.
 
 start http://localhost:3006
 pause
+

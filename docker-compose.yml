@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/tirtaaditya/pesan-rahasia:latest
+    image: ghcr.io/tirta7/pesanrahasia:latest
     container_name: pesanrahasia_app
     restart: unless-stopped
     depends_on:

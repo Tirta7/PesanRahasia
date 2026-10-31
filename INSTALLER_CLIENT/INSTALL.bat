@@ -66,15 +66,20 @@ if not exist ".env" (
 :: 5. Download Image Terbaru & Start PostgreSQL + App
 echo.
 echo [4/5] Mengunduh versi aplikasi ^& PostgreSQL terbaru dari cloud...
-docker compose pull
-if %errorlevel% neq 0 (
-    echo [WARNING] Gagal pull image cloud, menjalankan dari cache lokal jika ada...
+docker pull postgres:16-alpine
+docker pull ghcr.io/tirta7/pesanrahasia:latest >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Image cloud ghcr.io/tirta7/pesanrahasia:latest berhasil diunduh!
+    set "BUILD_FLAG="
+) else (
+    echo [WARNING] Image cloud belum siap/masih private, mem-build otomatis dari lokal...
+    set "BUILD_FLAG=--build"
 )
 
 echo.
 echo [5/5] Memulai kontainer PostgreSQL ^& Aplikasi PesanRahasia...
 docker compose down >nul 2>&1
-docker compose up -d
+docker compose up -d %BUILD_FLAG%
 
 echo.
 echo Menunggu inisialisasi PostgreSQL ^& aplikasi (10 detik)...
