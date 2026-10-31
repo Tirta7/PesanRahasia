@@ -508,7 +508,7 @@
         }
 
         // Jika lisensi sudah aktif / di-generate di VOC ML
-        if (data.status === 'active' || data.allowed === true || data.locked === 0) {
+        if (data.license && data.license.allowed && !data.license.isTrial) {
           if (statusTeks) {
             statusTeks.innerHTML = "<b style='color:#10B981;'>🎉 Pembayaran Berhasil Diterima! Membuka aplikasi...</b>";
           }
@@ -736,7 +736,79 @@
     userPushBtn.addEventListener('click', subscribeUserReadReceiptPush);
   }
 
+  // ============================================================================
+  // 2A. LIVE LICENSE STREAM (SSE) — Perubahan VOC ML / QRIS langsung tanpa refresh
+  // ============================================================================
+  let licenseEventSource = null;
+
+  function disconnectLicenseStream() {
+    if (licenseEventSource) {
+      licenseEventSource.close();
+      licenseEventSource = null;
+    }
+  }
+
+  function connectLicenseStream() {
+    disconnectLicenseStream();
+    const token = getSessionToken();
+    if (!token || !window.EventSource) return;
+
+    licenseEventSource = new EventSource(`/api/license/stream?token=${encodeURIComponent(token)}`);
+
+    licenseEventSource.addEventListener('license', (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        handleLiveLicenseUpdate(data.user, data.license);
+      } catch {
+        // Abaikan payload rusak
+      }
+    });
+
+    licenseEventSource.addEventListener('logout', () => {
+      disconnectLicenseStream();
+    });
+  }
+
+  function handleLiveLicenseUpdate(user, license) {
+    if (!user || !license) return;
+    const prev = currentLicense;
+    updateUserHeader(user, license);
+
+    const shareVisible = shareView && !shareView.classList.contains('hidden');
+    const licenseScreenVisible = accountLicenseView && !accountLicenseView.classList.contains('hidden');
+
+    if (!license.allowed) {
+      // Lisensi dikunci / habis / dikoreksi kurang -> tutup aplikasi seketika
+      if (prev && prev.allowed) {
+        showToast(`🔒 ${license.reason || 'Lisensi akun Anda dikunci dari VOC ML.'}`);
+      }
+      if (!shareVisible) {
+        renderAccountLicenseScreen(user, license);
+      }
+      return;
+    }
+
+    // Lisensi aktif
+    if (prev && !prev.allowed) {
+      clearInterval(licensePollInterval);
+      showView(createView);
+      startMyMessagesPolling();
+      showToast('🎉 Lisensi aktif! Aplikasi terbuka otomatis.');
+      return;
+    }
+
+    const expiryChanged = prev && (prev.expiresAt !== license.expiresAt || prev.daysLeft !== license.daysLeft);
+    if (expiryChanged) {
+      const info = license.daysLeft != null ? `${license.daysLeft} hari lagi` : 'Unlimited';
+      showToast(`🔄 Masa aktif lisensi diperbarui (${info}).`);
+    }
+    if (licenseScreenVisible) {
+      renderAccountLicenseScreen(user, license);
+    }
+  }
+
   function applyAuthAndLicenseState(user, license, isFreshLogin = false) {
+    connectLicenseStream();
     updateUserHeader(user, license);
     if (license && !license.allowed) {
       renderAccountLicenseScreen(user, license);
@@ -897,6 +969,7 @@
       }
       clearInterval(licensePollInterval);
       clearInterval(myMessagesPollInterval);
+      disconnectLicenseStream();
       setSessionToken('');
       updateUserHeader(null);
       showView(loginView);

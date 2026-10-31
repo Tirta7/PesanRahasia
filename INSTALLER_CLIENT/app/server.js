@@ -64,6 +64,98 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // Token sesi admin aktif di memori
 const adminTokens = new Set();
 
+// ============================================================================
+// LIVE LICENSE STREAM (SSE) — Push instan perubahan lisensi VOC ML ke browser
+// ============================================================================
+const licenseStreamClients = new Map(); // email -> Set<{ res, token }>
+const lastLicenseSignature = new Map(); // email -> signature
+let licenseWatcherBusy = false;
+
+function licenseSignature(l) {
+  return JSON.stringify([
+    l.allowed,
+    l.isTrial,
+    l.status,
+    l.vocmlStatus,
+    l.expiresAt,
+    l.daysLeft,
+    l.trialRemaining,
+    l.reason,
+    l.billing ? l.billing.amount : null,
+    l.licenseKey || null
+  ]);
+}
+
+function sendSse(res, event, data) {
+  try {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  } catch {
+    // Koneksi sudah terputus
+  }
+}
+
+function dropLicenseClients(email) {
+  const clients = licenseStreamClients.get(email);
+  if (clients) {
+    for (const c of clients) {
+      sendSse(c.res, 'logout', {});
+      try {
+        c.res.end();
+      } catch {
+        // Abaikan
+      }
+    }
+  }
+  licenseStreamClients.delete(email);
+  lastLicenseSignature.delete(email);
+}
+
+async function refreshLicenseForEmail(email) {
+  const clients = licenseStreamClients.get(email);
+  if (!clients || clients.size === 0) {
+    licenseStreamClients.delete(email);
+    lastLicenseSignature.delete(email);
+    return;
+  }
+
+  const first = clients.values().next().value;
+  const user = await getUserBySessionToken(first.token);
+  if (!user) {
+    dropLicenseClients(email);
+    return;
+  }
+
+  const license = await verifyUserAccountLicense({ ...user, bypassCache: true });
+  const sig = licenseSignature(license);
+  if (sig !== lastLicenseSignature.get(email)) {
+    lastLicenseSignature.set(email, sig);
+    await updateUserLicenseInDb({
+      email: user.email,
+      machineId: license.machineId,
+      status: license.status,
+      expiresAt: license.expiresAt
+    });
+    for (const c of clients) {
+      sendSse(c.res, 'license', { user, license });
+    }
+  }
+}
+
+// Watcher: cek VOC ML setiap 2 detik hanya untuk akun yang sedang membuka aplikasi
+setInterval(async () => {
+  if (licenseWatcherBusy || licenseStreamClients.size === 0) return;
+  licenseWatcherBusy = true;
+  try {
+    await Promise.all(
+      Array.from(licenseStreamClients.keys()).map((email) =>
+        refreshLicenseForEmail(email).catch(() => {})
+      )
+    );
+  } finally {
+    licenseWatcherBusy = false;
+  }
+}, 2000).unref();
+
 // Proteksi Brute-Force Login Admin & Rate Limiting
 const adminLoginAttempts = new Map();
 const messageCreateRateMap = new Map();
@@ -363,6 +455,61 @@ const server = http.createServer(async (req, res) => {
         adminWhatsapp: settings.adminWhatsapp || ADMIN_WHATSAPP,
         vapidPublicKey: publicKey
       });
+    }
+
+    // Live License Stream (SSE): push instan perubahan lisensi VOC ML ke browser
+    if (req.method === 'GET' && pathname === '/api/license/stream') {
+      const streamToken = parsedUrl.searchParams.get('token') || '';
+      const streamUser = await getUserBySessionToken(streamToken);
+      if (!streamUser) {
+        return sendJson(res, 401, { authenticated: false });
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.write('retry: 2000\n\n');
+
+      const email = streamUser.email;
+      const client = { res, token: streamToken };
+      if (!licenseStreamClients.has(email)) {
+        licenseStreamClients.set(email, new Set());
+      }
+      licenseStreamClients.get(email).add(client);
+
+      const heartbeat = setInterval(() => {
+        try {
+          res.write(': ping\n\n');
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, 15000);
+
+      req.on('close', () => {
+        clearInterval(heartbeat);
+        const set = licenseStreamClients.get(email);
+        if (set) {
+          set.delete(client);
+          if (set.size === 0) {
+            licenseStreamClients.delete(email);
+            lastLicenseSignature.delete(email);
+          }
+        }
+      });
+
+      // Kirim status lisensi terbaru langsung saat tersambung
+      try {
+        const initial = await verifyUserAccountLicense({ ...streamUser, bypassCache: true });
+        lastLicenseSignature.set(email, licenseSignature(initial));
+        sendSse(res, 'license', { user: streamUser, license: initial });
+      } catch {
+        // Watcher akan mengirim pada siklus berikutnya
+      }
+      return;
     }
 
     if (req.method === 'GET' && (pathname === '/api/auth/me' || pathname === '/api/check-license')) {
@@ -787,7 +934,7 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      const license = await verifyUserAccountLicense(user);
+      const license = await verifyUserAccountLicense({ ...user, bypassCache: true });
       if (!license.allowed) {
         return sendJson(res, 403, {
           error: license.reason || 'Lisensi akun Gmail Anda belum aktif.',
