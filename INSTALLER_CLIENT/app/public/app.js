@@ -719,18 +719,10 @@
       const res = await fetch('/api/auth/config', { cache: 'no-store' });
       publicConfig = await res.json();
 
-      if (publicConfig.strictGoogleOAuth && publicConfig.googleClientId) {
-        if (gmailLoginForm) gmailLoginForm.classList.add('hidden');
-        if (manualLoginDivider) manualLoginDivider.classList.add('hidden');
-      } else {
-        if (gmailLoginForm) gmailLoginForm.classList.remove('hidden');
-        if (manualLoginDivider) manualLoginDivider.classList.remove('hidden');
-      }
-
       const setupGoogleSdk = () => {
         if (!publicConfig.googleClientId || !window.google || !window.google.accounts) return;
 
-        // 1. Google Identity Services (ID Token / One-Tap)
+        // 1. Google Identity Services (One-Tap / ID Token)
         if (window.google.accounts.id) {
           window.google.accounts.id.initialize({
             client_id: publicConfig.googleClientId,
@@ -740,15 +732,6 @@
               }
             }
           });
-          if (googleSigninBtn) {
-            window.google.accounts.id.renderButton(googleSigninBtn, {
-              theme: 'filled_black',
-              size: 'large',
-              shape: 'pill',
-              text: 'continue_with',
-              width: 320
-            });
-          }
         }
 
         // 2. Google OAuth 2.0 Popup Client (1-Click Account Chooser + Foto Profil Asli)
@@ -766,10 +749,9 @@
       };
 
       setupGoogleSdk();
-      // Jika script GSI Google baru selesai dimuat sedikit belakangan
       setTimeout(setupGoogleSdk, 1200);
     } catch {
-      // Gunakan form Gmail langsung jika gagal memuat config
+      // Abaikan jika gagal memuat config
     }
   }
 
