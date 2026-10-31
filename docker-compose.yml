@@ -51,6 +51,16 @@ services:
       timeout: 5s
       retries: 3
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: pesanrahasia_tunnel
+    restart: unless-stopped
+    depends_on:
+      - app
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run 6eb73da6-6cbe-4e08-bb0c-48520f7fe9c1
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+
 volumes:
   pgdata:
 

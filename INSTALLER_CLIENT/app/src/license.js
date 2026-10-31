@@ -2,7 +2,29 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { checkLicense } from '../client-sdk/vocml-client.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Pastikan .env dimuat terlebih dahulu sebelum membaca process.env
+(function loadDotEnv() {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (!fs.existsSync(envPath)) return;
+  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (process.env[key] === undefined) {
+      process.env[key] = val;
+    }
+  }
+})();
 
 function resolveDefaultMachineId(envMachineId) {
   if (envMachineId && envMachineId.trim() !== '') {
@@ -17,64 +39,69 @@ const DEFAULT_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAdenKScMcRxd/GFPnwHLg026Y3mKWNmtyUR1KPQgLTFI=
 -----END PUBLIC KEY-----`;
 
-const VOCML_CONFIG = {
-  enabled: process.env.VOCML_ENABLED !== 'false', // Default true agar otomatis daftar ke vocml.vocpos.id
-  serverUrl: (process.env.VOCML_SERVER_URL || 'https://vocml.vocpos.id').replace('lisensi.vocpos.id', 'vocml.vocpos.id'),
-  product: ['pos', 'billiard'].includes(process.env.VOCML_PRODUCT) ? process.env.VOCML_PRODUCT : 'pos',
-  storeName: process.env.STORE_NAME || 'PesanRahasia VOCPOS',
-  machineId: resolveDefaultMachineId(process.env.VOCML_MACHINE_ID),
-  publicKeyPem: process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY,
-  cacheFile: process.env.VOCML_CACHE_FILE || './data/license-cache.json',
-  appVersion: '1.0.0'
-};
+function getVocmlConfig() {
+  return {
+    enabled: process.env.VOCML_ENABLED !== 'false',
+    serverUrl: (process.env.VOCML_SERVER_URL || 'https://vocml.vocpos.id').replace('lisensi.vocpos.id', 'vocml.vocpos.id'),
+    product: ['pos', 'billiard'].includes(process.env.VOCML_PRODUCT) ? process.env.VOCML_PRODUCT : 'pos',
+    storeName: process.env.STORE_NAME || 'PesanRahasia VOCPOS',
+    machineId: resolveDefaultMachineId(process.env.VOCML_MACHINE_ID),
+    publicKeyPem: process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY,
+    cacheFile: process.env.VOCML_CACHE_FILE || './data/license-cache.json',
+    appVersion: '1.0.0'
+  };
+}
 
-// Pastikan folder cache tersedia
+const initialCfg = getVocmlConfig();
+
 try {
-  fs.mkdirSync(path.dirname(VOCML_CONFIG.cacheFile), { recursive: true });
+  fs.mkdirSync(path.dirname(initialCfg.cacheFile), { recursive: true });
 } catch {
   // Abaikan jika gagal buat folder
 }
 
 let licenseStatus = {
-  allowed: !VOCML_CONFIG.enabled,
-  status: VOCML_CONFIG.enabled ? 'checking' : 'active',
-  reason: VOCML_CONFIG.enabled ? 'Sedang memeriksa & mendaftarkan lisensi ke vocml.vocpos.id...' : 'Aktif (Bypass)',
-  machineId: VOCML_CONFIG.machineId,
-  storeName: VOCML_CONFIG.storeName,
+  allowed: !initialCfg.enabled,
+  status: initialCfg.enabled ? 'checking' : 'active',
+  reason: initialCfg.enabled ? 'Sedang memeriksa & mendaftarkan lisensi ke vocml.vocpos.id...' : 'Aktif (Bypass)',
+  machineId: initialCfg.machineId,
+  storeName: initialCfg.storeName,
   expiresAt: null
 };
 
 let pollTimer = null;
 
 export async function runLicenseVerification() {
-  if (!VOCML_CONFIG.enabled) {
+  const cfg = getVocmlConfig();
+
+  if (!cfg.enabled) {
     licenseStatus = {
       allowed: true,
       status: 'active',
       reason: 'Aktif',
-      machineId: VOCML_CONFIG.machineId,
-      storeName: VOCML_CONFIG.storeName,
+      machineId: cfg.machineId,
+      storeName: cfg.storeName,
       expiresAt: null
     };
     return;
   }
 
   try {
-    const res = await checkLicense(VOCML_CONFIG);
+    const res = await checkLicense(cfg);
     licenseStatus = {
       allowed: Boolean(res.allowed),
       status: res.status || (res.allowed ? 'active' : 'locked'),
       reason: res.reason || (res.allowed ? 'Lisensi Aktif' : 'Menunggu aktivasi lisensi di Dashboard VOC ML'),
-      machineId: res.machineId || VOCML_CONFIG.machineId,
-      storeName: VOCML_CONFIG.storeName,
+      machineId: res.machineId || cfg.machineId,
+      storeName: cfg.storeName,
       expiresAt: res.expiresAt || null
     };
 
     if (res.allowed) {
-      console.log(`[VOCML] ✅ Lisensi Valid untuk "${VOCML_CONFIG.storeName}" (${VOCML_CONFIG.machineId}). Cek ulang dalam 3 jam.`);
+      console.log(`[VOCML] ✅ Lisensi Valid untuk "${cfg.storeName}" (${cfg.machineId}). Cek ulang dalam 3 jam.`);
       scheduleNextCheck(3 * 60 * 60 * 1000); // 3 Jam
     } else {
-      console.warn(`[VOCML] 🔒 APLIKASI TERKUNCI (${res.status}): ${licenseStatus.reason} | Machine ID: ${VOCML_CONFIG.machineId}`);
+      console.warn(`[VOCML] 🔒 APLIKASI TERKUNCI (${res.status}): ${licenseStatus.reason} | Machine ID: ${cfg.machineId}`);
       scheduleNextCheck(5 * 1000); // 5 Detik
     }
   } catch (err) {

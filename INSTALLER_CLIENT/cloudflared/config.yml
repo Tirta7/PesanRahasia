@@ -1,0 +1,7 @@
+tunnel: 6eb73da6-6cbe-4e08-bb0c-48520f7fe9c1
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: privatmassage.vocpos.id
+    service: http://app:3006
+  - service: http_status:404
