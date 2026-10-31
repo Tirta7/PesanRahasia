@@ -401,9 +401,12 @@ export async function getAdminDashboardData() {
         SELECT
           (SELECT COUNT(*)::int FROM users) AS "totalUsers",
           (SELECT COUNT(*)::int FROM users WHERE last_login_at >= NOW() - INTERVAL '24 hours') AS "activeUsersToday",
+          (SELECT COUNT(*)::int FROM users WHERE license_status IN ('active', 'expiring')) AS "licensedUsers",
+          (SELECT COUNT(*)::int FROM users WHERE license_status NOT IN ('active', 'expiring') OR license_status IS NULL) AS "unlicensedUsers",
           (SELECT COUNT(*)::int FROM message_logs) AS "totalMessages",
           (SELECT COUNT(*)::int FROM message_logs WHERE status = 'destroyed') AS "destroyedMessages",
-          (SELECT COUNT(*)::int FROM message_logs WHERE status = 'pending') AS "pendingMessages"
+          (SELECT COUNT(*)::int FROM message_logs WHERE status = 'pending') AS "pendingMessages",
+          (SELECT COUNT(*)::int FROM message_logs WHERE status = 'expired') AS "expiredMessages"
       `),
       pool.query(`
         SELECT
@@ -448,9 +451,12 @@ export async function getAdminDashboardData() {
       stats: statsRes.rows[0] || {
         totalUsers: 0,
         activeUsersToday: 0,
+        licensedUsers: 0,
+        unlicensedUsers: 0,
         totalMessages: 0,
         destroyedMessages: 0,
-        pendingMessages: 0
+        pendingMessages: 0,
+        expiredMessages: 0
       },
       users: usersRes.rows,
       logs: logsRes.rows
@@ -459,17 +465,58 @@ export async function getAdminDashboardData() {
 
   const usersArr = Array.from(memoryUsers.values());
   const logsArr = Array.from(memoryLogs.values()).reverse();
+  const licensedCount = usersArr.filter((u) => u.licenseStatus === 'active' || u.licenseStatus === 'expiring').length;
   return {
     stats: {
       totalUsers: usersArr.length,
       activeUsersToday: usersArr.length,
+      licensedUsers: licensedCount,
+      unlicensedUsers: usersArr.length - licensedCount,
       totalMessages: logsArr.length,
       destroyedMessages: logsArr.filter((l) => l.status === 'destroyed').length,
-      pendingMessages: logsArr.filter((l) => l.status === 'pending').length
+      pendingMessages: logsArr.filter((l) => l.status === 'pending').length,
+      expiredMessages: logsArr.filter((l) => l.status === 'expired').length
     },
     users: usersArr,
     logs: logsArr
   };
+}
+
+export async function deleteUserById(userId) {
+  if (isPostgresReady && pool) {
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    return true;
+  }
+  for (const [email, u] of memoryUsers.entries()) {
+    if (String(u.id) === String(userId)) {
+      memoryUsers.delete(email);
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function adminForceDestroyMessage(messageId) {
+  if (isPostgresReady && pool) {
+    await pool.query('DELETE FROM secret_messages WHERE id = $1', [messageId]);
+    await pool.query(
+      `UPDATE message_logs
+       SET status = 'destroyed',
+           opened_at = COALESCE(opened_at, NOW()),
+           opener_ip = COALESCE(opener_ip, 'Admin Force Destroy')
+       WHERE id = $1`,
+      [messageId]
+    );
+    return true;
+  }
+  memoryFallback.delete(messageId);
+  if (memoryLogs.has(messageId)) {
+    const l = memoryLogs.get(messageId);
+    l.status = 'destroyed';
+    l.openedAt = new Date().toISOString();
+    l.openerIp = 'Admin Force Destroy';
+  }
+  return true;
 }
 
 export async function cleanupExpiredMessages() {

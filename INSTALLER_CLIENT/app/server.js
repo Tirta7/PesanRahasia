@@ -35,6 +35,8 @@ import {
   getSecretMessageMeta,
   consumeSecretMessage,
   getAdminDashboardData,
+  deleteUserById,
+  adminForceDestroyMessage,
   cleanupExpiredMessages,
   getStorageEngineName
 } from './src/db.js';
@@ -313,6 +315,65 @@ const server = http.createServer(async (req, res) => {
 
       const dashboardData = await getAdminDashboardData();
       return sendJson(res, 200, dashboardData);
+    }
+
+    if (req.method === 'POST' && pathname === '/api/admin/sync-licenses') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+
+      let body = {};
+      try {
+        body = await parseJsonBody(req);
+      } catch {
+        body = {};
+      }
+
+      const dashboardData = await getAdminDashboardData();
+      const targetUsers = body.email
+        ? (dashboardData.users || []).filter((u) => u.email === body.email)
+        : (dashboardData.users || []).slice(0, 50);
+
+      for (const u of targetUsers) {
+        try {
+          const lic = await verifyUserAccountLicense({ email: u.email, name: u.name });
+          await updateUserLicenseInDb({
+            email: u.email,
+            machineId: lic.machineId,
+            status: lic.status,
+            expiresAt: lic.expiresAt
+          });
+        } catch {
+          // Lanjutkan ke user berikutnya
+        }
+      }
+
+      const updatedData = await getAdminDashboardData();
+      return sendJson(res, 200, {
+        syncedCount: targetUsers.length,
+        ...updatedData
+      });
+    }
+
+    const adminDeleteUserMatch = pathname.match(/^\/api\/admin\/users\/(\d+)$/);
+    if (req.method === 'DELETE' && adminDeleteUserMatch) {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      await deleteUserById(Number(adminDeleteUserMatch[1]));
+      return sendJson(res, 200, { success: true });
+    }
+
+    const adminDestroyMsgMatch = pathname.match(/^\/api\/admin\/messages\/([A-Za-z0-9_-]+)$/);
+    if (req.method === 'DELETE' && adminDestroyMsgMatch) {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      await adminForceDestroyMessage(adminDestroyMsgMatch[1]);
+      return sendJson(res, 200, { success: true });
     }
 
     // ========================================================================

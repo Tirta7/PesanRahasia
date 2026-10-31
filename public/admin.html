@@ -3,122 +3,380 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Admin — Monitoring Pengguna PesanRahasia</title>
+  <title>Dashboard Admin — Monitoring Pengguna & Lisensi PesanRahasia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #07090e;
-      --card: #101520;
-      --border: rgba(255, 255, 255, 0.09);
+      --bg-dark: #07090e;
+      --bg-card: rgba(16, 21, 32, 0.88);
+      --bg-card-solid: #101520;
+      --bg-input: #0a0e17;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: #10b981;
       --primary: #10b981;
+      --primary-hover: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.22);
       --danger: #ef4444;
       --warning: #f59e0b;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
+      --info: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
       min-height: 100vh;
-      padding: 24px 16px 60px;
+      overflow-x: hidden;
+      position: relative;
+      line-height: 1.5;
     }
+
+    /* Ambient Glows Selaras dengan Halaman Utama */
+    .bg-glow {
+      position: fixed;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      filter: blur(130px);
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+    .bg-glow-1 {
+      top: -140px;
+      left: -120px;
+      background: radial-gradient(circle, #10b981, transparent 70%);
+    }
+    .bg-glow-2 {
+      bottom: -160px;
+      right: -120px;
+      background: radial-gradient(circle, #3b82f6, transparent 70%);
+    }
+
     .container {
-      max-width: 1180px;
+      max-width: 1380px;
       margin: 0 auto;
+      padding: 24px 20px 64px;
     }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Topbar Header */
     .topbar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      margin-bottom: 26px;
+      padding: 16px 22px;
+      background: var(--bg-card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
     }
+
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 13px;
       text-decoration: none;
-      color: var(--text);
+      color: var(--text-main);
     }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      box-shadow: 0 0 22px var(--primary-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .brand-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand-name {
+      font-weight: 800;
+      font-size: 1.18rem;
+      letter-spacing: -0.02em;
+    }
+
     .brand-badge {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
       color: #6ee7b7;
-      padding: 4px 10px;
+      padding: 3px 10px;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
+      white-space: nowrap;
     }
+
+    .brand-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 15px;
       border-radius: 10px;
-      font-size: 0.86rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      border: none;
+      font-family: inherit;
+      border: 1px solid transparent;
       cursor: pointer;
       text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.18s ease;
     }
-    .btn-primary { background: var(--primary); color: #04130d; }
-    .btn-outline { background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border); }
-    .btn-danger { background: rgba(239,68,68,0.16); color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
-    .hidden { display: none !important; }
 
-    /* Login Box */
-    .login-card {
-      max-width: 420px;
-      margin: 60px auto;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #04130d;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
     }
-    .login-card h1 { font-size: 1.35rem; margin-bottom: 8px; }
-    .login-card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.38);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      border-color: var(--border);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-amber {
+      background: rgba(245, 158, 11, 0.14);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .btn-amber:hover {
+      background: rgba(245, 158, 11, 0.24);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.24);
+    }
+
+    .btn-xs {
+      padding: 5px 10px;
+      font-size: 0.74rem;
+      border-radius: 8px;
+      gap: 5px;
+    }
+
+    /* Login Card */
+    .login-card {
+      max-width: 440px;
+      margin: 56px auto;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      text-align: center;
+    }
+    .login-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      margin: 0 auto 16px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.38);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.65rem;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+    }
+    .login-card h1 {
+      font-size: 1.38rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .login-card p {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
     .input {
       width: 100%;
-      padding: 12px 14px;
-      background: #080b12;
+      padding: 12px 15px;
+      background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 10px;
-      color: var(--text);
-      font-size: 0.94rem;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      font-family: inherit;
       margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
     }
 
-    /* Stats Grid */
+    /* 5 Kartu Statistik */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
       margin-bottom: 24px;
     }
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
+    @media (max-width: 1180px) {
+      .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
     }
-    .stat-label { font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
-    .stat-value { font-size: 2rem; font-weight: 800; color: #fff; }
-    .stat-sub { font-size: 0.76rem; color: #6ee7b7; margin-top: 4px; }
 
-    /* Section Card & Table */
-    .section-card {
-      background: var(--card);
+    .stat-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 22px;
-      margin-bottom: 24px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.18s ease, border-color 0.18s ease;
     }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .stat-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .stat-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+    }
+    .stat-value {
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .stat-sub {
+      font-size: 0.74rem;
+      color: #6ee7b7;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Section Card */
+    .section-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    }
+
     .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title-group h2 {
+      font-size: 1.12rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .section-title-group p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .toolbar-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -126,126 +384,457 @@
       gap: 12px;
       margin-bottom: 16px;
     }
-    .section-header h2 { font-size: 1.15rem; }
-    .search-box {
-      padding: 9px 14px;
-      background: #080b12;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-size: 0.86rem;
-      min-width: 260px;
+
+    .filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
-    .table-wrap {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-    th, td {
-      padding: 12px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    th {
-      color: var(--muted);
+
+    .filter-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
       font-weight: 600;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      background: rgba(255,255,255,0.02);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      white-space: nowrap;
     }
-    tr:hover td {
-      background: rgba(255,255,255,0.02);
+    .filter-pill:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
     }
-    .user-cell {
+    .filter-pill.active {
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.42);
+    }
+
+    .search-group {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      padding: 8px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 0.82rem;
+      font-family: inherit;
+      min-width: 280px;
+      transition: border-color 0.2s;
+    }
+    .search-box:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Table Styling — Anti-Wrap & Rapi */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(7, 9, 14, 0.45);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(255, 255, 255, 0.03);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background 0.15s ease;
+    }
+    tbody tr:hover td {
+      background: rgba(16, 185, 129, 0.04);
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    /* User Profile Cell */
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 210px;
     }
     .avatar-sm {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       object-fit: cover;
+      border: 2px solid rgba(16, 185, 129, 0.4);
+      flex-shrink: 0;
     }
-    .badge {
-      display: inline-block;
-      padding: 3px 9px;
-      border-radius: 999px;
-      font-size: 0.74rem;
+    .user-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .user-name {
       font-weight: 700;
+      color: #ffffff;
+      font-size: 0.86rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
     }
-    .badge-destroyed { background: rgba(239,68,68,0.16); color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
-    .badge-pending { background: rgba(245,158,11,0.16); color: #fde68a; border: 1px solid rgba(245,158,11,0.35); }
-    .badge-expired { background: rgba(156,163,175,0.15); color: #9ca3af; }
-    .mono { font-family: monospace; font-size: 0.8rem; color: #d1d5db; }
+    .user-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #6ee7b7;
+      white-space: nowrap;
+    }
+
+    /* Machine ID Pill + Copy */
+    .machine-id-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #fcd34d;
+      white-space: nowrap;
+    }
+    .copy-mini-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #f3f4f6;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .copy-mini-btn:hover {
+      background: var(--primary);
+      color: #04130d;
+      border-color: var(--primary);
+    }
+
+    /* Badges — Selalu 1 Baris (nowrap) */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .badge-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.38);
+    }
+    .badge-pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fde68a;
+      border: 1px solid rgba(245, 158, 11, 0.38);
+    }
+    .badge-destroyed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.38);
+    }
+    .badge-expired {
+      background: rgba(156, 163, 175, 0.14);
+      color: #d1d5db;
+      border: 1px solid rgba(156, 163, 175, 0.28);
+    }
+
+    .sub-detail {
+      display: block;
+      font-size: 0.71rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.77rem;
+      color: #d1d5db;
+    }
+
+    .ip-chip {
+      display: inline-block;
+      max-width: 165px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    /* Modal Detail Pengguna */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, 0.78);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 760px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #101520;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 640px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .detail-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .detail-box-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .detail-box-value {
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #fff;
+      word-break: break-all;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #101520;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #ecfdf5;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55);
+      z-index: 2000;
+      transition: all 0.25s ease;
+    }
   </style>
 </head>
 <body>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
   <div class="container">
-    <!-- Topbar -->
+    <!-- Topbar Selaras dengan Konsep Utama -->
     <header class="topbar">
       <div class="brand">
-        <h2>🔒 PesanRahasia</h2>
-        <span class="brand-badge">Dashboard Admin & Monitoring Pengguna</span>
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title-row">
+            <span class="brand-name">PesanRahasia</span>
+            <span class="brand-badge">🛡️ Control Center & Lisensi VOC ML</span>
+          </div>
+          <div class="brand-sub">Monitoring Akun Gmail, Lisensi Per-User (Skema C), & Audit Link E2EE</div>
+        </div>
       </div>
-      <div style="display:flex; gap:10px;">
-        <a href="/" class="btn btn-outline">← Ke Halaman Aplikasi</a>
-        <button id="refresh-btn" class="btn btn-outline hidden">🔄 Refresh Data</button>
-        <button id="admin-logout-btn" class="btn btn-danger hidden">Keluar Admin</button>
+
+      <div class="topbar-actions">
+        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" id="vocml-link-btn" class="btn btn-amber hidden">
+          🔑 Buka Server Lisensi VOC ML ↗
+        </a>
+        <button id="sync-all-btn" class="btn btn-outline hidden">
+          🔄 Sinkron Lisensi VOC ML
+        </button>
+        <button id="refresh-btn" class="btn btn-outline hidden">
+          ⚡ Refresh Data
+        </button>
+        <a href="/" class="btn btn-outline">
+          ← Ke Halaman Aplikasi
+        </a>
+        <button id="admin-logout-btn" class="btn btn-danger hidden">
+          Keluar Admin
+        </button>
       </div>
     </header>
 
     <!-- Login Admin -->
     <section id="admin-login-section" class="login-card">
-      <h1>🔐 Login Panel Admin</h1>
-      <p>Masukkan password Admin untuk melihat daftar pengguna Gmail dan riwayat aktivitas aplikasi.</p>
+      <div class="login-icon">🔐</div>
+      <h1>Login Panel Admin</h1>
+      <p>Masukkan password Administrator untuk memantau pengguna Gmail, status lisensi VOC ML, dan riwayat link rahasia.</p>
       <form id="admin-login-form">
-        <input type="password" id="admin-password" class="input" placeholder="Password Admin (default: admin123)" required />
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Masuk ke Dashboard</button>
+        <input type="password" id="admin-password" class="input" placeholder="Masukkan Password Admin (default: admin123)" required />
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">
+          Masuk ke Dashboard Admin
+        </button>
       </form>
-      <p id="login-error" style="color:#f87171; font-size:0.82rem; margin-top:10px;" class="hidden"></p>
+      <p id="login-error" style="color:#f87171; font-size:0.82rem; margin-top:12px;" class="hidden"></p>
     </section>
 
     <!-- Konten Dashboard Admin -->
     <main id="admin-dashboard-section" class="hidden">
-      <!-- 4 Kartu Statistik -->
+      <!-- 5 Kartu Statistik Detail -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-label">👥 Total Pengguna Gmail</div>
+          <div class="stat-top">
+            <span class="stat-label">Total Pengguna Gmail</span>
+            <span class="stat-icon">👥</span>
+          </div>
           <div class="stat-value" id="stat-total-users">0</div>
           <div class="stat-sub">Akun @gmail.com terdaftar</div>
         </div>
+
         <div class="stat-card">
-          <div class="stat-label">🟢 Pengguna Aktif (24 Jam)</div>
+          <div class="stat-top">
+            <span class="stat-label">Lisensi VOC ML Aktif</span>
+            <span class="stat-icon">🔑</span>
+          </div>
+          <div class="stat-value" id="stat-licensed-users">0</div>
+          <div class="stat-sub" id="stat-unlicensed-sub">0 menunggu aktivasi</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-top">
+            <span class="stat-label">Pengguna Aktif (24 Jam)</span>
+            <span class="stat-icon">🟢</span>
+          </div>
           <div class="stat-value" id="stat-active-today">0</div>
           <div class="stat-sub">Login / kirim pesan hari ini</div>
         </div>
+
         <div class="stat-card">
-          <div class="stat-label">📨 Total Link Pesan Dibuat</div>
+          <div class="stat-top">
+            <span class="stat-label">Total Link Pesan Dibuat</span>
+            <span class="stat-icon">📨</span>
+          </div>
           <div class="stat-value" id="stat-total-messages">0</div>
           <div class="stat-sub" id="stat-pending-sub">0 menunggu dibuka</div>
         </div>
+
         <div class="stat-card">
-          <div class="stat-label">🔥 Pesan Sudah Dibuka & Hancur</div>
+          <div class="stat-top">
+            <span class="stat-label">Pesan Dibuka & Hancur</span>
+            <span class="stat-icon">🔥</span>
+          </div>
           <div class="stat-value" id="stat-destroyed-messages">0</div>
-          <div class="stat-sub">Otomatis terhapus permanen</div>
+          <div class="stat-sub" id="stat-expired-sub">Otomatis terhapus permanen</div>
         </div>
       </div>
 
-      <!-- Tabel 1: Daftar Semua Pengguna Gmail -->
+      <!-- Tabel 1: Daftar Semua Pengguna Gmail & Lisensi VOC ML -->
       <div class="section-card">
         <div class="section-header">
-          <div>
-            <h2>📋 Daftar Pengguna Aplikasi (Login Gmail)</h2>
-            <p style="font-size:0.82rem; color:var(--muted);">Menampilkan seluruh pengguna yang login menggunakan akun @gmail.com beserta jumlah pesan yang dibuat.</p>
+          <div class="section-title-group">
+            <h2>📋 Daftar Pengguna Aplikasi & Lisensi Akun (Skema C)</h2>
+            <p>Setiap akun Gmail otomatis memiliki Machine ID unik (<code>GMAIL-XXXX-XXXX-XXXX</code>) yang terhubung ke <strong>vocml.vocpos.id</strong>.</p>
           </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, atau IP..." />
-            <button id="export-csv-btn" class="btn btn-primary">📥 Export CSV Pengguna</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="export-csv-btn" class="btn btn-primary btn-xs" style="padding:8px 13px; font-size:0.78rem;">
+              📥 Export CSV Pengguna
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="filter-pills" id="user-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">Semua Pengguna</button>
+            <button type="button" class="filter-pill" data-filter="active">✅ Lisensi Aktif</button>
+            <button type="button" class="filter-pill" data-filter="pending">⏳ Menunggu Aktivasi</button>
+            <button type="button" class="filter-pill" data-filter="expired">⌛ Habis / Terkunci</button>
+          </div>
+
+          <div class="search-group">
+            <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, ID Lisensi, atau IP..." />
           </div>
         </div>
 
@@ -254,19 +843,17 @@
             <thead>
               <tr>
                 <th>No</th>
-                <th>Pengguna</th>
-                <th>Email Gmail</th>
+                <th>Pengguna & Email Gmail</th>
                 <th>ID Lisensi (VOC ML)</th>
-                <th>Status Lisensi</th>
+                <th>Status & Masa Aktif</th>
                 <th>Total Pesan</th>
-                <th>IP Address</th>
-                <th>Perangkat / Browser</th>
-                <th>Pertama Masuk</th>
-                <th>Terakhir Aktif</th>
+                <th>Perangkat & IP Terakhir</th>
+                <th>Waktu Bergabung & Aktif</th>
+                <th>Aksi Detail</th>
               </tr>
             </thead>
             <tbody id="users-table-body">
-              <tr><td colspan="10" style="text-align:center; color:var(--muted);">Memuat data pengguna...</td></tr>
+              <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat data pengguna...</td></tr>
             </tbody>
           </table>
         </div>
@@ -275,9 +862,27 @@
       <!-- Tabel 2: Riwayat Aktivitas Link Pesan -->
       <div class="section-card">
         <div class="section-header">
-          <div>
+          <div class="section-title-group">
             <h2>🕵️ Riwayat Aktivitas Link Pesan Rahasia</h2>
-            <p style="font-size:0.82rem; color:var(--muted);">Memantau siapa yang membuat link dan kapan link tersebut dibuka/dihancurkan (isi pesan tetap terenkripsi E2EE).</p>
+            <p>Memantau siapa yang membuat link rahasia, mode proteksi, kapan dibuka, serta IP & perangkat pembuka (isi pesan tetap terenkripsi E2EE).</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="export-logs-csv-btn" class="btn btn-outline btn-xs" style="padding:8px 13px; font-size:0.78rem;">
+              📥 Export CSV Riwayat Pesan
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="filter-pills" id="log-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">Semua Status</button>
+            <button type="button" class="filter-pill" data-filter="pending">⏳ Menunggu Dibuka</button>
+            <button type="button" class="filter-pill" data-filter="destroyed">🔥 Sudah Dibuka & Hancur</button>
+            <button type="button" class="filter-pill" data-filter="expired">⌛ Kedaluwarsa</button>
+          </div>
+
+          <div class="search-group">
+            <input type="text" id="log-search" class="search-box" placeholder="🔍 Cari ID Link, email pengirim, atau IP pembuka..." />
           </div>
         </div>
 
@@ -291,17 +896,91 @@
                 <th>Status Pesan</th>
                 <th>Waktu Dibuat</th>
                 <th>Waktu Dibuka / Hancur</th>
-                <th>IP Pembuka</th>
+                <th>Pembuka (IP & Perangkat)</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="logs-table-body">
-              <tr><td colspan="7" style="text-align:center; color:var(--muted);">Memuat riwayat aktivitas...</td></tr>
+              <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat riwayat aktivitas...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </main>
   </div>
+
+  <!-- Modal Detail Lengkap Pengguna -->
+  <div id="user-detail-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img id="modal-user-avatar" src="" class="avatar-sm" style="width:46px; height:46px;" alt="" />
+          <div>
+            <h3 id="modal-user-name" style="font-size:1.1rem; font-weight:800;">-</h3>
+            <span id="modal-user-email" class="user-email">-</span>
+          </div>
+        </div>
+        <button id="close-modal-btn" class="btn btn-outline btn-xs">✕ Tutup</button>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-box">
+          <div class="detail-box-label">ID Lisensi Akun (VOC ML Machine ID)</div>
+          <div class="detail-box-value" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span id="modal-user-machine" style="font-family:'JetBrains Mono',monospace; color:#fcd34d;">-</span>
+            <button type="button" id="modal-copy-machine" class="copy-mini-btn">Salin ID</button>
+          </div>
+        </div>
+
+        <div class="detail-box">
+          <div class="detail-box-label">Status & Masa Aktif Lisensi</div>
+          <div class="detail-box-value" id="modal-user-license">-</div>
+        </div>
+
+        <div class="detail-box">
+          <div class="detail-box-label">IP Address Terakhir</div>
+          <div class="detail-box-value mono" id="modal-user-ip">-</div>
+        </div>
+
+        <div class="detail-box">
+          <div class="detail-box-label">Total Link Pesan Dibuat</div>
+          <div class="detail-box-value" id="modal-user-msg-count">0 pesan</div>
+        </div>
+
+        <div class="detail-box" style="grid-column: 1 / -1;">
+          <div class="detail-box-label">Detail Browser & Perangkat (User-Agent)</div>
+          <div class="detail-box-value mono" style="font-size:0.75rem; color:var(--text-muted);" id="modal-user-ua">-</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+        <h4 style="font-size:0.9rem; font-weight:700;">📨 Riwayat Link Pesan dari Pengguna Ini</h4>
+        <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" class="btn btn-amber btn-xs">
+          🔑 Kelola Lisensi di VOC ML ↗
+        </a>
+      </div>
+
+      <div class="table-wrap" style="max-height:240px; overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Link</th>
+              <th>Mode</th>
+              <th>Status</th>
+              <th>Waktu Dibuat</th>
+              <th>Waktu Dibuka</th>
+            </tr>
+          </thead>
+          <tbody id="modal-user-logs-body">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada pesan.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="admin-toast" class="toast hidden"></div>
 
   <script>
     (() => {
@@ -311,22 +990,45 @@
       const loginForm = document.getElementById('admin-login-form');
       const passwordInput = document.getElementById('admin-password');
       const loginError = document.getElementById('login-error');
+
+      const vocmlLinkBtn = document.getElementById('vocml-link-btn');
+      const syncAllBtn = document.getElementById('sync-all-btn');
       const refreshBtn = document.getElementById('refresh-btn');
       const logoutBtn = document.getElementById('admin-logout-btn');
+
       const userSearchInput = document.getElementById('user-search');
+      const logSearchInput = document.getElementById('log-search');
       const exportCsvBtn = document.getElementById('export-csv-btn');
+      const exportLogsCsvBtn = document.getElementById('export-logs-csv-btn');
 
       const statTotalUsers = document.getElementById('stat-total-users');
+      const statLicensedUsers = document.getElementById('stat-licensed-users');
+      const statUnlicensedSub = document.getElementById('stat-unlicensed-sub');
       const statActiveToday = document.getElementById('stat-active-today');
       const statTotalMessages = document.getElementById('stat-total-messages');
       const statPendingSub = document.getElementById('stat-pending-sub');
       const statDestroyedMessages = document.getElementById('stat-destroyed-messages');
+      const statExpiredSub = document.getElementById('stat-expired-sub');
 
       const usersTableBody = document.getElementById('users-table-body');
       const logsTableBody = document.getElementById('logs-table-body');
 
+      const userDetailModal = document.getElementById('user-detail-modal');
+      const closeModalBtn = document.getElementById('close-modal-btn');
+      const adminToast = document.getElementById('admin-toast');
+
       let allUsers = [];
+      let allLogs = [];
+      let activeUserFilter = 'all';
+      let activeLogFilter = 'all';
       let refreshTimer = null;
+
+      function showToast(msg) {
+        adminToast.textContent = msg;
+        adminToast.classList.remove('hidden');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => adminToast.classList.add('hidden'), 3200);
+      }
 
       function getAdminToken() {
         return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -341,23 +1043,72 @@
         if (!d) return '-';
         return new Date(d).toLocaleString('id-ID', {
           day: '2-digit', month: 'short', year: 'numeric',
-          hour: '2-digit', minute: '2-digit', second: '2-digit'
+          hour: '2-digit', minute: '2-digit'
         });
       }
 
-      function shortUA(ua) {
-        if (!ua) return '-';
-        if (ua.includes('iPhone')) return '📱 iPhone / iOS';
-        if (ua.includes('Android')) return '📱 Android';
-        if (ua.includes('Mac OS X')) return '💻 macOS';
-        if (ua.includes('Windows')) return '💻 Windows PC';
-        if (ua.includes('Linux')) return '💻 Linux';
-        return ua.slice(0, 36);
+      function formatExpiryInfo(expiresAt) {
+        if (!expiresAt) return 'Belum ditentukan';
+        const exp = new Date(expiresAt);
+        if (isNaN(exp.getTime())) return String(expiresAt);
+        const diffDays = Math.ceil((exp.getTime() - Date.now()) / 86400000);
+        const dateStr = exp.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (diffDays > 0) return `s/d ${dateStr} (${diffDays} hari lagi)`;
+        return `Habis ${dateStr}`;
       }
 
-      function renderUsersTable(filterText = '') {
-        const q = filterText.trim().toLowerCase();
+      function shortUA(ua) {
+        if (!ua) return '🌐 Browser';
+        let os = 'Desktop';
+        if (ua.includes('iPhone') || ua.includes('iPad')) os = '📱 iOS';
+        else if (ua.includes('Android')) os = '📱 Android';
+        else if (ua.includes('Mac OS X')) os = '💻 macOS';
+        else if (ua.includes('Windows')) os = '💻 Windows';
+        else if (ua.includes('Linux')) os = '💻 Linux';
+
+        let br = '';
+        if (ua.includes('Edg/')) br = 'Edge';
+        else if (ua.includes('Chrome/')) br = 'Chrome';
+        else if (ua.includes('Firefox/')) br = 'Firefox';
+        else if (ua.includes('Safari/') && !ua.includes('Chrome/')) br = 'Safari';
+
+        return br ? `${os} · ${br}` : os;
+      }
+
+      function licenseBadgeHtml(u) {
+        const st = u.licenseStatus || 'pending';
+        if (st === 'active' || st === 'expiring') {
+          return `
+            <span class="badge badge-active">✅ Lisensi Aktif</span>
+            <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+          `;
+        }
+        if (st === 'expired') {
+          return `
+            <span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>
+            <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+          `;
+        }
+        if (st === 'locked') {
+          return `
+            <span class="badge badge-destroyed">🔒 Dikunci VOC ML</span>
+            <span class="sub-detail">Perlu dibuka di VOC ML</span>
+          `;
+        }
+        return `
+          <span class="badge badge-pending">⏳ Menunggu Aktivasi</span>
+          <span class="sub-detail">Aktifkan di vocml.vocpos.id</span>
+        `;
+      }
+
+      function renderUsersTable() {
+        const q = userSearchInput.value.trim().toLowerCase();
         const filtered = allUsers.filter((u) => {
+          const st = u.licenseStatus || 'pending';
+          if (activeUserFilter === 'active' && st !== 'active' && st !== 'expiring') return false;
+          if (activeUserFilter === 'pending' && st !== 'pending') return false;
+          if (activeUserFilter === 'expired' && st !== 'expired' && st !== 'locked') return false;
+
           if (!q) return true;
           return (
             (u.name || '').toLowerCase().includes(q) ||
@@ -368,51 +1119,88 @@
         });
 
         if (filtered.length === 0) {
-          usersTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--muted);">Belum ada data pengguna yang cocok.</td></tr>';
+          usersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Tidak ada data pengguna Gmail yang sesuai filter.</td></tr>';
           return;
         }
 
         usersTableBody.innerHTML = filtered
           .map((u, idx) => {
             const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
-            let licBadge = '<span class="badge badge-pending">⏳ Menunggu Aktivasi</span>';
-            if (u.licenseStatus === 'active' || u.licenseStatus === 'expiring') {
-              licBadge = '<span class="badge" style="background:rgba(16,185,129,0.16);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">✅ Lisensi Aktif</span>';
-            } else if (u.licenseStatus === 'expired') {
-              licBadge = '<span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>';
-            } else if (u.licenseStatus === 'locked') {
-              licBadge = '<span class="badge badge-destroyed">🔒 Dikunci</span>';
-            }
+            const userLogs = allLogs.filter((l) => l.senderEmail === u.email);
+            const destroyedCount = userLogs.filter((l) => l.status === 'destroyed').length;
+            const machineId = u.machineId || '-';
+
             return `
               <tr>
-                <td>${idx + 1}</td>
+                <td class="nowrap" style="color:var(--text-muted); font-weight:600;">${idx + 1}</td>
                 <td>
                   <div class="user-cell">
                     <img src="${avatar}" class="avatar-sm" alt="" />
-                    <strong>${u.name || '-'}</strong>
+                    <div class="user-meta">
+                      <span class="user-name">${u.name || '-'}</span>
+                      <span class="user-email">${u.email}</span>
+                    </div>
                   </div>
                 </td>
-                <td class="mono" style="color:#6ee7b7;">${u.email}</td>
-                <td class="mono" style="color:#fcd34d;">${u.machineId || '-'}</td>
-                <td>${licBadge}</td>
-                <td><strong>${u.messagesCreated || 0}</strong> pesan</td>
-                <td class="mono">${u.lastIp || '-'}</td>
-                <td>${shortUA(u.userAgent)}</td>
-                <td>${formatDate(u.createdAt)}</td>
-                <td>${formatDate(u.lastLoginAt)}</td>
+                <td class="nowrap">
+                  <div class="machine-id-pill">
+                    <span>${machineId}</span>
+                    <button type="button" class="copy-mini-btn js-copy-machine" data-machine="${machineId}">Salin</button>
+                  </div>
+                </td>
+                <td class="nowrap">
+                  ${licenseBadgeHtml(u)}
+                </td>
+                <td class="nowrap">
+                  <strong style="color:#fff; font-size:0.9rem;">${u.messagesCreated || 0}</strong> <span style="color:var(--text-muted);">pesan</span>
+                  <span class="sub-detail">🔥 ${destroyedCount} sudah dibuka</span>
+                </td>
+                <td class="nowrap">
+                  <div style="font-weight:600; font-size:0.8rem;">${shortUA(u.userAgent)}</div>
+                  <span class="ip-chip" title="IP Terakhir: ${u.lastIp || '-'}">${u.lastIp || '-'}</span>
+                </td>
+                <td class="nowrap">
+                  <div style="font-size:0.78rem; color:#e5e7eb;">Aktif: ${formatDate(u.lastLoginAt)}</div>
+                  <span class="sub-detail">Gabung: ${formatDate(u.createdAt)}</span>
+                </td>
+                <td class="nowrap">
+                  <div class="action-group">
+                    <button type="button" class="btn btn-outline btn-xs js-user-detail" data-email="${u.email}">
+                      🔍 Detail
+                    </button>
+                    <button type="button" class="btn btn-amber btn-xs js-sync-user" data-email="${u.email}" title="Cek ulang status lisensi akun ini ke server VOC ML">
+                      🔄 Cek Lisensi
+                    </button>
+                    <button type="button" class="btn btn-danger btn-xs js-delete-user" data-id="${u.id}" data-email="${u.email}" title="Hapus pengguna">
+                      🗑️
+                    </button>
+                  </div>
+                </td>
               </tr>
             `;
           })
           .join('');
       }
 
-      function renderLogsTable(logs) {
-        if (!logs || logs.length === 0) {
-          logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted);">Belum ada riwayat pengiriman pesan.</td></tr>';
+      function renderLogsTable() {
+        const q = logSearchInput.value.trim().toLowerCase();
+        const filtered = allLogs.filter((l) => {
+          if (activeLogFilter !== 'all' && l.status !== activeLogFilter) return false;
+          if (!q) return true;
+          return (
+            (l.id || '').toLowerCase().includes(q) ||
+            (l.senderEmail || '').toLowerCase().includes(q) ||
+            (l.senderName || '').toLowerCase().includes(q) ||
+            (l.openerIp || '').toLowerCase().includes(q)
+          );
+        });
+
+        if (filtered.length === 0) {
+          logsTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Belum ada riwayat aktivitas link pesan yang sesuai filter.</td></tr>';
           return;
         }
 
-        logsTableBody.innerHTML = logs
+        logsTableBody.innerHTML = filtered
           .map((l) => {
             let badgeHtml = '<span class="badge badge-pending">⏳ Menunggu Dibuka</span>';
             if (l.status === 'destroyed') {
@@ -421,22 +1209,88 @@
               badgeHtml = '<span class="badge badge-expired">⌛ Kedaluwarsa</span>';
             }
 
+            const modeLabel = l.protectionMode === 'hold' ? '👆 Tahan Tombol' : '🔦 Spotlight';
+
             return `
               <tr>
-                <td class="mono">${l.id}</td>
-                <td>
-                  <strong>${l.senderName || '-'}</strong><br/>
-                  <span class="mono" style="color:#9ca3af; font-size:0.76rem;">${l.senderEmail}</span>
+                <td class="nowrap">
+                  <span class="mono" style="color:#6ee7b7; font-weight:700;">${l.id}</span>
                 </td>
-                <td>${l.protectionMode === 'hold' ? '👆 Tahan Tombol' : '🔦 Spotlight'} (${l.viewTimerSeconds}d)</td>
-                <td>${badgeHtml}</td>
-                <td>${formatDate(l.createdAt)}</td>
-                <td>${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
-                <td class="mono">${l.openerIp ? `${l.openerIp} (${shortUA(l.openerUserAgent)})` : '-'}</td>
+                <td class="nowrap">
+                  <div style="font-weight:700; color:#fff;">${l.senderName || '-'}</div>
+                  <span class="user-email">${l.senderEmail}</span>
+                </td>
+                <td class="nowrap">
+                  <div style="font-weight:600;">${modeLabel}</div>
+                  <span class="sub-detail">⏱️ Timer baca: ${l.viewTimerSeconds} detik</span>
+                </td>
+                <td class="nowrap">${badgeHtml}</td>
+                <td class="nowrap">
+                  <div>${formatDate(l.createdAt)}</div>
+                  <span class="sub-detail">Batas: ${formatDate(l.expiresAt)}</span>
+                </td>
+                <td class="nowrap">
+                  ${l.openedAt ? `<strong style="color:#fca5a5;">${formatDate(l.openedAt)}</strong>` : '<span style="color:var(--text-muted);">Belum dibuka</span>'}
+                </td>
+                <td class="nowrap">
+                  ${
+                    l.openerIp
+                      ? `<div>${shortUA(l.openerUserAgent)}</div><span class="ip-chip" title="${l.openerIp}">${l.openerIp}</span>`
+                      : '<span style="color:var(--text-muted);">-</span>'
+                  }
+                </td>
+                <td class="nowrap">
+                  ${
+                    l.status === 'pending'
+                      ? `<button type="button" class="btn btn-danger btn-xs js-destroy-msg" data-id="${l.id}">🔥 Hancurkan</button>`
+                      : `<span style="font-size:0.73rem; color:var(--text-muted);">Selesai</span>`
+                  }
+                </td>
               </tr>
             `;
           })
           .join('');
+      }
+
+      function openUserDetailModal(email) {
+        const u = allUsers.find((item) => item.email === email);
+        if (!u) return;
+
+        const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
+        document.getElementById('modal-user-avatar').src = avatar;
+        document.getElementById('modal-user-name').textContent = u.name || '-';
+        document.getElementById('modal-user-email').textContent = u.email;
+        document.getElementById('modal-user-machine').textContent = u.machineId || '-';
+        document.getElementById('modal-user-license').innerHTML = licenseBadgeHtml(u);
+        document.getElementById('modal-user-ip').textContent = u.lastIp || '-';
+        document.getElementById('modal-user-msg-count').textContent = `${u.messagesCreated || 0} pesan dibuat`;
+        document.getElementById('modal-user-ua').textContent = u.userAgent || '-';
+
+        const copyBtn = document.getElementById('modal-copy-machine');
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(u.machineId || '');
+          showToast(`✅ Machine ID ${u.machineId} disalin!`);
+        };
+
+        const userLogs = allLogs.filter((l) => l.senderEmail === u.email);
+        const modalLogsBody = document.getElementById('modal-user-logs-body');
+        if (userLogs.length === 0) {
+          modalLogsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:18px;">Pengguna ini belum membuat link pesan rahasia.</td></tr>';
+        } else {
+          modalLogsBody.innerHTML = userLogs
+            .map((l) => `
+              <tr>
+                <td class="mono" style="color:#6ee7b7;">${l.id}</td>
+                <td>${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'} (${l.viewTimerSeconds}s)</td>
+                <td>${l.status === 'destroyed' ? '🔥 Hancur' : l.status === 'expired' ? '⌛ Expired' : '⏳ Menunggu'}</td>
+                <td>${formatDate(l.createdAt)}</td>
+                <td>${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
+              </tr>
+            `)
+            .join('');
+        }
+
+        userDetailModal.classList.remove('hidden');
       }
 
       async function loadDashboard() {
@@ -453,23 +1307,64 @@
             return;
           }
           const data = await res.json();
-          statTotalUsers.textContent = data.stats?.totalUsers ?? 0;
-          statActiveToday.textContent = data.stats?.activeUsersToday ?? 0;
-          statTotalMessages.textContent = data.stats?.totalMessages ?? 0;
-          statPendingSub.textContent = `${data.stats?.pendingMessages ?? 0} menunggu dibuka`;
-          statDestroyedMessages.textContent = data.stats?.destroyedMessages ?? 0;
-
-          allUsers = data.users || [];
-          renderUsersTable(userSearchInput.value);
-          renderLogsTable(data.logs || []);
+          updateDashboardState(data);
         } catch (err) {
           console.error(err);
+        }
+      }
+
+      function updateDashboardState(data) {
+        const st = data.stats || {};
+        statTotalUsers.textContent = st.totalUsers ?? 0;
+        statLicensedUsers.textContent = st.licensedUsers ?? 0;
+        statUnlicensedSub.textContent = `${st.unlicensedUsers ?? 0} menunggu aktivasi / habis`;
+        statActiveToday.textContent = st.activeUsersToday ?? 0;
+        statTotalMessages.textContent = st.totalMessages ?? 0;
+        statPendingSub.textContent = `${st.pendingMessages ?? 0} menunggu dibuka`;
+        statDestroyedMessages.textContent = st.destroyedMessages ?? 0;
+        statExpiredSub.textContent = `${st.expiredMessages ?? 0} kedaluwarsa otomatis`;
+
+        allUsers = data.users || [];
+        allLogs = data.logs || [];
+        renderUsersTable();
+        renderLogsTable();
+      }
+
+      async function syncLicensesWithVocml(email = null) {
+        const token = getAdminToken();
+        if (!token) return;
+
+        syncAllBtn.disabled = true;
+        const origText = syncAllBtn.textContent;
+        syncAllBtn.textContent = '⏳ Menyinkronkan ke VOC ML...';
+
+        try {
+          const res = await fetch('/api/admin/sync-licenses', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(email ? { email } : {})
+          });
+          if (res.ok) {
+            const data = await res.json();
+            updateDashboardState(data);
+            showToast(email ? `✅ Status lisensi ${email} berhasil diperbarui dari VOC ML!` : `✅ ${data.syncedCount || 0} akun berhasil disinkronkan dengan VOC ML!`);
+          }
+        } catch (err) {
+          showToast('⚠️ Gagal menyinkronkan lisensi ke VOC ML.');
+        } finally {
+          syncAllBtn.disabled = false;
+          syncAllBtn.textContent = origText;
         }
       }
 
       function showDashboard() {
         loginSection.classList.add('hidden');
         dashboardSection.classList.remove('hidden');
+        vocmlLinkBtn.classList.remove('hidden');
+        syncAllBtn.classList.remove('hidden');
         refreshBtn.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         loadDashboard();
@@ -480,6 +1375,8 @@
       function showLogin() {
         clearInterval(refreshTimer);
         dashboardSection.classList.add('hidden');
+        vocmlLinkBtn.classList.add('hidden');
+        syncAllBtn.classList.add('hidden');
         refreshBtn.classList.add('hidden');
         logoutBtn.classList.add('hidden');
         loginSection.classList.remove('hidden');
@@ -507,24 +1404,109 @@
         }
       });
 
-      refreshBtn.addEventListener('click', loadDashboard);
+      refreshBtn.addEventListener('click', () => {
+        loadDashboard();
+        showToast('⚡ Data dashboard diperbarui.');
+      });
+
+      syncAllBtn.addEventListener('click', () => syncLicensesWithVocml(null));
 
       logoutBtn.addEventListener('click', () => {
         setAdminToken('');
         showLogin();
       });
 
-      userSearchInput.addEventListener('input', () => {
-        renderUsersTable(userSearchInput.value);
+      userSearchInput.addEventListener('input', renderUsersTable);
+      logSearchInput.addEventListener('input', renderLogsTable);
+
+      // Filter pills untuk Tabel Pengguna
+      document.getElementById('user-filter-pills').addEventListener('click', (e) => {
+        const btn = e.target.closest('.filter-pill');
+        if (!btn) return;
+        document.querySelectorAll('#user-filter-pills .filter-pill').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+        activeUserFilter = btn.dataset.filter || 'all';
+        renderUsersTable();
+      });
+
+      // Filter pills untuk Tabel Log
+      document.getElementById('log-filter-pills').addEventListener('click', (e) => {
+        const btn = e.target.closest('.filter-pill');
+        if (!btn) return;
+        document.querySelectorAll('#log-filter-pills .filter-pill').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+        activeLogFilter = btn.dataset.filter || 'all';
+        renderLogsTable();
+      });
+
+      // Delegated actions pada Tabel Pengguna
+      usersTableBody.addEventListener('click', async (e) => {
+        const copyBtn = e.target.closest('.js-copy-machine');
+        if (copyBtn) {
+          const code = copyBtn.dataset.machine || '';
+          navigator.clipboard.writeText(code);
+          showToast(`✅ ID Lisensi ${code} disalin ke clipboard!`);
+          return;
+        }
+
+        const detailBtn = e.target.closest('.js-user-detail');
+        if (detailBtn) {
+          openUserDetailModal(detailBtn.dataset.email);
+          return;
+        }
+
+        const syncBtn = e.target.closest('.js-sync-user');
+        if (syncBtn) {
+          await syncLicensesWithVocml(syncBtn.dataset.email);
+          return;
+        }
+
+        const delBtn = e.target.closest('.js-delete-user');
+        if (delBtn) {
+          const email = delBtn.dataset.email;
+          if (!confirm(`Hapus akun pengguna ${email} dari daftar?`)) return;
+          const res = await fetch(`/api/admin/users/${delBtn.dataset.id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${getAdminToken()}` }
+          });
+          if (res.ok) {
+            showToast(`🗑️ Pengguna ${email} dihapus.`);
+            loadDashboard();
+          }
+        }
+      });
+
+      // Delegated actions pada Tabel Log Pesan
+      logsTableBody.addEventListener('click', async (e) => {
+        const destroyBtn = e.target.closest('.js-destroy-msg');
+        if (!destroyBtn) return;
+        const msgId = destroyBtn.dataset.id;
+        if (!confirm(`Hancurkan paksa pesan rahasia #${msgId} sekarang sehingga tidak bisa dibuka penerima?`)) return;
+        const res = await fetch(`/api/admin/messages/${msgId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${getAdminToken()}` }
+        });
+        if (res.ok) {
+          showToast(`🔥 Pesan #${msgId} berhasil dihancurkan paksa.`);
+          loadDashboard();
+        }
+      });
+
+      closeModalBtn.addEventListener('click', () => userDetailModal.classList.add('hidden'));
+      userDetailModal.addEventListener('click', (e) => {
+        if (e.target === userDetailModal) userDetailModal.classList.add('hidden');
       });
 
       exportCsvBtn.addEventListener('click', () => {
         if (!allUsers.length) return;
-        const headers = ['ID', 'Nama', 'Email Gmail', 'Total Pesan', 'IP Terakhir', 'Perangkat', 'Pertama Masuk', 'Terakhir Aktif'];
+        const headers = ['ID', 'Nama', 'Email Gmail', 'ID Lisensi VOC ML', 'Status Lisensi', 'Masa Berlaku', 'Total Pesan', 'IP Terakhir', 'Perangkat', 'Pertama Masuk', 'Terakhir Aktif'];
         const rows = allUsers.map((u) => [
           u.id,
           `"${(u.name || '').replace(/"/g, '""')}"`,
           u.email,
+          u.machineId || '',
+          u.licenseStatus || 'pending',
+          u.licenseExpiresAt || '',
           u.messagesCreated || 0,
           u.lastIp || '',
           `"${(u.userAgent || '').replace(/"/g, '""')}"`,
@@ -540,6 +1522,29 @@
         a.click();
       });
 
+      exportLogsCsvBtn.addEventListener('click', () => {
+        if (!allLogs.length) return;
+        const headers = ['ID Link', 'Nama Pengirim', 'Email Pengirim', 'Mode Proteksi', 'Timer (Detik)', 'Status', 'Waktu Dibuat', 'Waktu Dibuka', 'IP Pembuka'];
+        const rows = allLogs.map((l) => [
+          l.id,
+          `"${(l.senderName || '').replace(/"/g, '""')}"`,
+          l.senderEmail || '',
+          l.protectionMode || '',
+          l.viewTimerSeconds || 60,
+          l.status || '',
+          l.createdAt || '',
+          l.openedAt || '',
+          l.openerIp || ''
+        ]);
+        const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `riwayat-pesanrahasia-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+      });
+
       if (getAdminToken()) {
         showDashboard();
       }
@@ -547,4 +1552,3 @@
   </script>
 </body>
 </html>
-
