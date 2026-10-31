@@ -4,9 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Admin — Monitoring Pengguna & Lisensi PesanRahasia</title>
+  <meta name="theme-color" content="#10b981" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PR Admin" />
+  <link rel="manifest" href="/admin-manifest.json" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.svg" />
-  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -732,6 +737,15 @@
       </div>
 
       <div class="topbar-actions">
+        <button type="button" id="admin-pwa-install-btn" class="btn btn-primary hidden" title="Install Dashboard Admin sebagai Aplikasi PWA di HP / Laptop">
+          📲 Install Aplikasi Admin
+        </button>
+        <button type="button" id="enable-push-btn" class="btn btn-primary hidden" title="Aktifkan Web Push Notification di HP ini saat ada pendaftar baru">
+          🔔 Aktifkan Notifikasi HP
+        </button>
+        <button type="button" id="test-push-btn" class="btn btn-outline hidden" title="Kirim simulasi notifikasi pendaftar baru ke HP Admin">
+          📨 Tes Notifikasi
+        </button>
         <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" id="vocml-link-btn" class="btn btn-amber hidden">
           🔑 Buka Server Lisensi VOC ML ↗
         </a>
@@ -756,7 +770,7 @@
       <h1>Login Panel Admin</h1>
       <p>Masukkan password Administrator untuk memantau pengguna Gmail, status lisensi VOC ML, dan riwayat link rahasia.</p>
       <form id="admin-login-form">
-        <input type="password" id="admin-password" class="input" placeholder="Masukkan Password Admin (default: admin123)" required />
+        <input type="password" id="admin-password" class="input" autocomplete="current-password" required />
         <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">
           Masuk ke Dashboard Admin
         </button>
@@ -766,6 +780,29 @@
 
     <!-- Konten Dashboard Admin -->
     <main id="admin-dashboard-section" class="hidden">
+      <!-- Bar Status Web Push Notifikasi Pendaftar Baru -->
+      <div id="push-status-banner" class="section-card" style="padding:14px 20px; margin-bottom:18px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; border-color:rgba(16,185,129,0.3);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.35rem;">📲</span>
+          <div>
+            <div style="font-weight:700; font-size:0.9rem; color:#fff;" id="push-banner-title">
+              Notifikasi Pendaftar Baru (Web Push PWA)
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted);" id="push-banner-desc">
+              Aktifkan notifikasi agar handphone Anda berbunyi otomatis setiap ada pengguna Gmail baru yang mendaftar.
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span id="push-sub-badge" class="badge badge-pending">⏳ Belum Diaktifkan di Perangkat Ini</span>
+          <button type="button" id="banner-enable-push-btn" class="btn btn-primary btn-xs" style="padding:7px 13px;">
+            🔔 Aktifkan Web Push Sekarang
+          </button>
+          <button type="button" id="banner-test-push-btn" class="btn btn-outline btn-xs" style="padding:7px 13px;">
+            📨 Kirim Tes ke HP
+          </button>
+        </div>
+      </div>
       <!-- 5 Kartu Statistik Detail -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -998,6 +1035,13 @@
       const syncAllBtn = document.getElementById('sync-all-btn');
       const refreshBtn = document.getElementById('refresh-btn');
       const logoutBtn = document.getElementById('admin-logout-btn');
+      const enablePushBtn = document.getElementById('enable-push-btn');
+      const testPushBtn = document.getElementById('test-push-btn');
+      const bannerEnablePushBtn = document.getElementById('banner-enable-push-btn');
+      const bannerTestPushBtn = document.getElementById('banner-test-push-btn');
+      const pushSubBadge = document.getElementById('push-sub-badge');
+      const pushBannerDesc = document.getElementById('push-banner-desc');
+      const adminPwaInstallBtn = document.getElementById('admin-pwa-install-btn');
 
       const userSearchInput = document.getElementById('user-search');
       const logSearchInput = document.getElementById('log-search');
@@ -1025,6 +1069,137 @@
       let activeUserFilter = 'all';
       let activeLogFilter = 'all';
       let refreshTimer = null;
+      let lastKnownUserEmails = null;
+      let swReg = null;
+
+      function playNotificationChime() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const now = ctx.currentTime;
+          [587.33, 880].forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+            gain.gain.setValueAtTime(0.18, now + idx * 0.14);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.14);
+            osc.stop(now + idx * 0.14 + 0.36);
+          });
+        } catch {
+          // Abaikan jika browser memblokir autoplay audio
+        }
+      }
+
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+
+      async function checkAndSyncWebPushState() {
+        const token = getAdminToken();
+        if (!token || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+        try {
+          swReg = await navigator.serviceWorker.register('/sw.js');
+          const existingSub = await swReg.pushManager.getSubscription();
+          const keyRes = await fetch('/api/admin/push/vapid-public-key', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!keyRes.ok) return;
+          const { subscriberCount } = await keyRes.json();
+
+          if (existingSub && Notification.permission === 'granted') {
+            pushSubBadge.className = 'badge badge-active';
+            pushSubBadge.textContent = `🔔 Web Push Aktif (${subscriberCount || 1} Perangkat)`;
+            enablePushBtn.textContent = '🔔 Web Push Aktif';
+            bannerEnablePushBtn.textContent = '🔄 Perbarui Langganan Push';
+            pushBannerDesc.textContent = 'Notifikasi Web Push aktif di perangkat ini. Handphone/browser Anda akan langsung berbunyi saat ada pendaftar baru.';
+          } else {
+            pushSubBadge.className = 'badge badge-pending';
+            pushSubBadge.textContent = `⏳ Belum Aktif di Perangkat Ini (${subscriberCount || 0} Terdaftar)`;
+          }
+        } catch {
+          // Abaikan
+        }
+      }
+
+      async function subscribeAdminWebPush() {
+        const token = getAdminToken();
+        if (!token) return;
+
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+          alert('Browser ini belum mendukung Web Push Notification. Jika menggunakan iPhone (iOS), klik "Install Aplikasi Admin" / "Add to Home Screen" terlebih dahulu lalu buka dari layar utama.');
+          return;
+        }
+
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') {
+            showToast('⚠️ Izin notifikasi ditolak di pengaturan browser.');
+            return;
+          }
+
+          swReg = await navigator.serviceWorker.register('/sw.js');
+          await navigator.serviceWorker.ready;
+
+          const keyRes = await fetch('/api/admin/push/vapid-public-key', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const { publicKey } = await keyRes.json();
+
+          const subscription = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+
+          const saveRes = await fetch('/api/admin/push/subscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ subscription })
+          });
+
+          const saveData = await saveRes.json();
+          if (!saveRes.ok) throw new Error(saveData.error || 'Gagal menyimpan subscription.');
+
+          playNotificationChime();
+          showToast('🔔 Web Push Notification berhasil diaktifkan di perangkat ini!');
+          await checkAndSyncWebPushState();
+        } catch (err) {
+          showToast(`⚠️ Gagal mengaktifkan Web Push: ${err.message}`);
+        }
+      }
+
+      async function triggerTestWebPush() {
+        const token = getAdminToken();
+        if (!token) return;
+        try {
+          const res = await fetch('/api/admin/push/test', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.sent > 0) {
+            playNotificationChime();
+            showToast(`📨 Notifikasi tes terkirim ke ${data.sent} perangkat Admin!`);
+          } else {
+            showToast('⚠️ Belum ada perangkat yang mengaktifkan Web Push. Klik "Aktifkan Web Push Sekarang" terlebih dahulu.');
+          }
+        } catch {
+          showToast('⚠️ Gagal mengirim tes notifikasi.');
+        }
+      }
 
       function showToast(msg) {
         adminToast.textContent = msg;
@@ -1327,7 +1502,18 @@
         statDestroyedMessages.textContent = st.destroyedMessages ?? 0;
         statExpiredSub.textContent = `${st.expiredMessages ?? 0} kedaluwarsa otomatis`;
 
-        allUsers = data.users || [];
+        const newUsersList = data.users || [];
+        if (lastKnownUserEmails !== null) {
+          for (const u of newUsersList) {
+            if (!lastKnownUserEmails.has(u.email)) {
+              playNotificationChime();
+              showToast(`🆕 Pendaftar Baru: ${u.name} (${u.email}) — ID: ${u.machineId}`);
+            }
+          }
+        }
+        lastKnownUserEmails = new Set(newUsersList.map((u) => u.email));
+
+        allUsers = newUsersList;
         allLogs = data.logs || [];
         renderUsersTable();
         renderLogsTable();
@@ -1366,11 +1552,14 @@
       function showDashboard() {
         loginSection.classList.add('hidden');
         dashboardSection.classList.remove('hidden');
+        enablePushBtn.classList.remove('hidden');
+        testPushBtn.classList.remove('hidden');
         vocmlLinkBtn.classList.remove('hidden');
         syncAllBtn.classList.remove('hidden');
         refreshBtn.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         loadDashboard();
+        checkAndSyncWebPushState();
         clearInterval(refreshTimer);
         refreshTimer = setInterval(loadDashboard, 10000);
       }
@@ -1378,6 +1567,8 @@
       function showLogin() {
         clearInterval(refreshTimer);
         dashboardSection.classList.add('hidden');
+        enablePushBtn.classList.add('hidden');
+        testPushBtn.classList.add('hidden');
         vocmlLinkBtn.classList.add('hidden');
         syncAllBtn.classList.add('hidden');
         refreshBtn.classList.add('hidden');
@@ -1413,6 +1604,52 @@
       });
 
       syncAllBtn.addEventListener('click', () => syncLicensesWithVocml(null));
+      enablePushBtn.addEventListener('click', subscribeAdminWebPush);
+      bannerEnablePushBtn.addEventListener('click', subscribeAdminWebPush);
+      testPushBtn.addEventListener('click', triggerTestWebPush);
+      bannerTestPushBtn.addEventListener('click', triggerTestWebPush);
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data?.type === 'PUSH_NEW_USER') {
+            playNotificationChime();
+            loadDashboard();
+          }
+        });
+      }
+
+      // PWA Install Prompt untuk Admin Dashboard
+      let deferredAdminPwaPrompt = null;
+      const isStandaloneAdmin = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const isIosDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+      if (!isStandaloneAdmin && isIosDevice && adminPwaInstallBtn) {
+        adminPwaInstallBtn.classList.remove('hidden');
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredAdminPwaPrompt = e;
+        if (!isStandaloneAdmin && adminPwaInstallBtn) {
+          adminPwaInstallBtn.classList.remove('hidden');
+        }
+      });
+
+      if (adminPwaInstallBtn) {
+        adminPwaInstallBtn.addEventListener('click', async () => {
+          if (deferredAdminPwaPrompt) {
+            deferredAdminPwaPrompt.prompt();
+            const choice = await deferredAdminPwaPrompt.userChoice;
+            if (choice.outcome === 'accepted') {
+              adminPwaInstallBtn.classList.add('hidden');
+            }
+            deferredAdminPwaPrompt = null;
+          } else if (isIosDevice) {
+            alert('Untuk menginstall PWA Admin di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).\n3. Buka aplikasi dari Layar Utama lalu klik "Aktifkan Web Push Sekarang".');
+          }
+        });
+      }
 
       logoutBtn.addEventListener('click', () => {
         setAdminToken('');

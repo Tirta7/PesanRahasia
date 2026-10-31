@@ -158,6 +158,30 @@ body {
   letter-spacing: 0.03em;
 }
 
+.btn-pwa-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.14));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+.btn-pwa-install:hover {
+  background: var(--primary);
+  color: #04130d;
+  transform: translateY(-1px);
+}
+
 .security-pill {
   display: inline-flex;
   align-items: center;

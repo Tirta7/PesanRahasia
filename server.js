@@ -38,10 +38,14 @@ import {
   deleteUserById,
   adminForceDestroyMessage,
   cleanupExpiredMessages,
-  getStorageEngineName
+  getStorageEngineName,
+  saveAdminPushSubscription,
+  removeAdminPushSubscription,
+  getAllAdminPushSubscriptions
 } from './src/db.js';
 
 import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML } from './src/license.js';
+import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src/webpush.js';
 
 const PORT = Number(process.env.PORT) || 3006;
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://privatmassage.vocpos.id').replace(/\/+$/, '');
@@ -79,6 +83,29 @@ function sendJson(res, statusCode, data) {
   setSecurityHeaders(res);
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
+}
+
+async function broadcastWebPushToAdmins(payloadObj) {
+  try {
+    const subs = await getAllAdminPushSubscriptions();
+    if (!subs.length) return { sent: 0, total: 0 };
+
+    let sent = 0;
+    await Promise.all(
+      subs.map(async (sub) => {
+        const res = await sendWebPushNotification(sub, payloadObj);
+        if (res.ok) {
+          sent += 1;
+        } else if (res.expired) {
+          await removeAdminPushSubscription(sub.endpoint);
+        }
+      })
+    );
+    return { sent, total: subs.length };
+  } catch (err) {
+    console.warn('[WebPush] Gagal broadcast notifikasi:', err.message);
+    return { sent: 0, total: 0 };
+  }
 }
 
 function getClientIp(req) {
@@ -272,11 +299,24 @@ const server = http.createServer(async (req, res) => {
         expiresAt: license.expiresAt
       });
 
+      // Jika pendaftar Gmail baru pertama kali masuk, langsung kirim Web Push Notification ke HP Admin!
+      if (session.isNewUser) {
+        broadcastWebPushToAdmins({
+          title: '🆕 Pendaftar Baru PesanRahasia!',
+          body: `${session.user.name} (${session.user.email}) baru saja mendaftar.\nID Lisensi: ${license.machineId}`,
+          url: '/admin',
+          email: session.user.email,
+          machineId: license.machineId,
+          tag: `new-user-${session.user.email}`
+        });
+      }
+
       return sendJson(res, 200, {
         authenticated: true,
         user: session.user,
         token: session.token,
-        license
+        license,
+        isNewUser: Boolean(session.isNewUser)
       });
     }
 
@@ -374,6 +414,71 @@ const server = http.createServer(async (req, res) => {
       }
       await adminForceDestroyMessage(adminDestroyMsgMatch[1]);
       return sendJson(res, 200, { success: true });
+    }
+
+    // Endpoint VAPID Public Key & Status Web Push Admin
+    if (req.method === 'GET' && pathname === '/api/admin/push/vapid-public-key') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      const { publicKey } = getVapidKeys();
+      const subs = await getAllAdminPushSubscriptions();
+      return sendJson(res, 200, {
+        publicKey,
+        subscriberCount: subs.length
+      });
+    }
+
+    // Endpoint Simpan Subscription Web Push dari HP / Browser Admin
+    if (req.method === 'POST' && pathname === '/api/admin/push/subscribe') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+
+      const saved = await saveAdminPushSubscription(
+        body.subscription,
+        String(req.headers['user-agent'] || 'Admin Device')
+      );
+      if (!saved) {
+        return sendJson(res, 400, { error: 'Data subscription Web Push tidak valid.' });
+      }
+
+      // Kirim notifikasi sambutan langsung ke HP/perangkat Admin yang baru diaktifkan
+      await sendWebPushNotification(body.subscription, {
+        title: '🔔 Web Push Admin Aktif!',
+        body: 'Perangkat ini sekarang akan menerima notifikasi otomatis setiap ada pendaftar Gmail baru.',
+        url: '/admin',
+        tag: 'admin-push-welcome'
+      });
+
+      const subs = await getAllAdminPushSubscriptions();
+      return sendJson(res, 200, {
+        success: true,
+        subscriberCount: subs.length
+      });
+    }
+
+    // Endpoint Tes Kirim Web Push ke Semua Perangkat Admin
+    if (req.method === 'POST' && pathname === '/api/admin/push/test') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      const result = await broadcastWebPushToAdmins({
+        title: '🆕 Simulasi Pendaftar Baru!',
+        body: 'budi.santoso@gmail.com baru saja mendaftar.\nID Lisensi: GMAIL-8F2A-41C9-7B0E',
+        url: '/admin',
+        tag: 'admin-push-test-' + Date.now()
+      });
+      return sendJson(res, 200, result);
     }
 
     // ========================================================================
@@ -497,6 +602,18 @@ const server = http.createServer(async (req, res) => {
     // Rute Favicon: /favicon.ico -> Sajikan favicon.svg
     if (req.method === 'GET' && pathname === '/favicon.ico') {
       return serveStaticFile(res, path.join(PUBLIC_DIR, 'favicon.svg'));
+    }
+
+    // Rute Ikon PNG untuk PWA (192x192 & 512x512)
+    if (req.method === 'GET' && (pathname === '/icon-192.png' || pathname === '/icon-512.png')) {
+      const size = pathname.includes('512') ? 512 : 192;
+      const pngBuffer = generatePwaIconPng(size);
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': pngBuffer.length,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      return res.end(pngBuffer);
     }
 
     // 5. Rute halaman baca pesan: /m/:id -> Sajikan index.html

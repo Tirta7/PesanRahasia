@@ -12,6 +12,7 @@ const memoryFallback = new Map();
 const memoryUsers = new Map();
 const memorySessions = new Map();
 const memoryLogs = new Map();
+const memoryPushSubscriptions = new Map();
 
 let pool = null;
 let isPostgresReady = false;
@@ -122,6 +123,16 @@ export async function initDatabase() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_status VARCHAR(32) DEFAULT 'pending';`).catch(() => {});
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_expires_at VARCHAR(64);`).catch(() => {});
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
+        endpoint TEXT PRIMARY KEY,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `).catch(() => {});
+
     isPostgresReady = true;
     console.log('[PostgreSQL] ✅ Terhubung ke PostgreSQL & tabel (users, secret_messages, message_logs) siap digunakan.');
     return true;
@@ -143,6 +154,9 @@ export async function loginOrRegisterGmailUser({ email, name, picture = '', ip =
   const expiresAtMs = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 hari
 
   if (isPostgresReady && pool) {
+    const existingRes = await pool.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
+    const isNewUser = existingRes.rowCount === 0;
+
     const userRes = await pool.query(
       `INSERT INTO users (email, name, picture, auth_provider, last_ip, user_agent, created_at, last_login_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
@@ -163,11 +177,12 @@ export async function loginOrRegisterGmailUser({ email, name, picture = '', ip =
       [sessionToken, user.id, expiresAtMs]
     );
 
-    return { user, token: sessionToken };
+    return { user, token: sessionToken, isNewUser };
   }
 
   // Fallback In-Memory
   let existing = memoryUsers.get(cleanEmail);
+  const isNewUser = !existing;
   if (!existing) {
     existing = {
       id: memoryUsers.size + 1,
@@ -189,7 +204,7 @@ export async function loginOrRegisterGmailUser({ email, name, picture = '', ip =
   }
   memoryUsers.set(cleanEmail, existing);
   memorySessions.set(sessionToken, { email: cleanEmail, expiresAt: expiresAtMs });
-  return { user: existing, token: sessionToken };
+  return { user: existing, token: sessionToken, isNewUser };
 }
 
 export async function getUserBySessionToken(token) {
@@ -541,3 +556,62 @@ export async function cleanupExpiredMessages() {
 export function getStorageEngineName() {
   return isPostgresReady ? 'PostgreSQL' : 'In-Memory Fallback';
 }
+
+// ============================================================================
+// MANAJEMEN WEB PUSH SUBSCRIPTION ADMIN (UNTUK NOTIFIKASI HP / PWA)
+// ============================================================================
+
+export async function saveAdminPushSubscription(subscription, userAgent = '') {
+  if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+    return false;
+  }
+
+  if (isPostgresReady && pool) {
+    await pool.query(
+      `INSERT INTO admin_push_subscriptions (endpoint, p256dh, auth, user_agent, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (endpoint) DO UPDATE SET
+         p256dh = EXCLUDED.p256dh,
+         auth = EXCLUDED.auth,
+         user_agent = EXCLUDED.user_agent`,
+      [subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, userAgent]
+    );
+    return true;
+  }
+
+  memoryPushSubscriptions.set(subscription.endpoint, {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth
+    },
+    userAgent,
+    createdAt: new Date().toISOString()
+  });
+  return true;
+}
+
+export async function removeAdminPushSubscription(endpoint) {
+  if (!endpoint) return;
+  if (isPostgresReady && pool) {
+    await pool.query('DELETE FROM admin_push_subscriptions WHERE endpoint = $1', [endpoint]).catch(() => {});
+    return;
+  }
+  memoryPushSubscriptions.delete(endpoint);
+}
+
+export async function getAllAdminPushSubscriptions() {
+  if (isPostgresReady && pool) {
+    const res = await pool.query('SELECT endpoint, p256dh, auth, user_agent AS "userAgent" FROM admin_push_subscriptions');
+    return res.rows.map((r) => ({
+      endpoint: r.endpoint,
+      keys: {
+        p256dh: r.p256dh,
+        auth: r.auth
+      },
+      userAgent: r.userAgent
+    }));
+  }
+  return Array.from(memoryPushSubscriptions.values());
+}
+

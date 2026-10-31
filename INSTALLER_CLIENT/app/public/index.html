@@ -8,9 +8,14 @@
   <meta property="og:title" content="🔒 Anda Menerima Pesan Rahasia Sekali Baca" />
   <meta property="og:description" content="Pesan ini terenkripsi End-to-End dan otomatis hancur selamanya setelah dibuka satu kali." />
   <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#10b981" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PesanRahasia" />
+  <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.svg" />
-  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="stylesheet" href="/style.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -39,6 +44,10 @@
       </a>
 
       <div class="header-right">
+        <button type="button" id="pwa-install-btn" class="btn-pwa-install hidden" title="Install Aplikasi PesanRahasia di HP / Laptop">
+          📲 Install Aplikasi
+        </button>
+
         <!-- Info User Gmail yang Sedang Login -->
         <div id="user-profile-pill" class="user-profile-pill hidden">
           <img id="user-avatar" src="" alt="Avatar" class="user-avatar" />
@@ -422,5 +431,50 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="/app.js"></script>
+  <script>
+    (() => {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+
+      let deferredPrompt = null;
+      const installBtn = document.getElementById('pwa-install-btn');
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+      if (!isStandalone && isIos && installBtn) {
+        installBtn.classList.remove('hidden');
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (!isStandalone && installBtn) {
+          installBtn.classList.remove('hidden');
+        }
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            if (choice.outcome === 'accepted') {
+              installBtn.classList.add('hidden');
+            }
+            deferredPrompt = null;
+          } else if (isIos) {
+            alert('Untuk menginstall aplikasi di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di bawah browser Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).');
+          }
+        });
+      }
+
+      window.addEventListener('appinstalled', () => {
+        if (installBtn) installBtn.classList.add('hidden');
+      });
+    })();
+  </script>
 </body>
 </html>
