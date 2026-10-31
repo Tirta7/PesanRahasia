@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Admin — Monitoring Pengguna & Lisensi PesanRahasia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PesanRahasia Admin — Monitoring Pengguna & Lisensi VOC ML</title>
   <meta name="theme-color" content="#10b981" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -17,29 +17,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #07090e;
-      --bg-card: rgba(16, 21, 32, 0.88);
-      --bg-card-solid: #101520;
-      --bg-input: #0a0e17;
-      --border: rgba(255, 255, 255, 0.08);
-      --border-focus: #10b981;
+      --bg-dark: #06090f;
+      --bg-card: rgba(15, 20, 30, 0.88);
+      --bg-card-solid: #0f141e;
+      --bg-input: #090d14;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-emerald: rgba(16, 185, 129, 0.35);
       --primary: #10b981;
       --primary-hover: #059669;
       --primary-glow: rgba(16, 185, 129, 0.22);
       --danger: #ef4444;
       --warning: #f59e0b;
-      --info: #3b82f6;
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
-      --radius-lg: 20px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
+      --text-dim: #6b7280;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -52,74 +50,73 @@
       line-height: 1.5;
     }
 
-    /* Ambient Glows Selaras dengan Halaman Utama */
-    .bg-glow {
+    /* Ambient Glows Selaras dengan index.html */
+    .ambient-bg {
       position: fixed;
-      width: 520px;
-      height: 520px;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
+    }
+    .glow {
+      position: absolute;
+      width: 480px;
+      height: 480px;
       border-radius: 50%;
       filter: blur(130px);
-      z-index: -1;
-      pointer-events: none;
-      opacity: 0.3;
+      opacity: 0.28;
     }
-    .bg-glow-1 {
+    .glow-1 {
       top: -140px;
       left: -120px;
       background: radial-gradient(circle, #10b981, transparent 70%);
     }
-    .bg-glow-2 {
+    .glow-2 {
       bottom: -160px;
       right: -120px;
       background: radial-gradient(circle, #3b82f6, transparent 70%);
-    }
-
-    .container {
-      max-width: 1380px;
-      margin: 0 auto;
-      padding: 24px 20px 64px;
     }
 
     .hidden {
       display: none !important;
     }
 
-    /* Topbar Header */
-    .topbar {
+    .app-container {
+      width: 100%;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 22px 18px 60px;
+    }
+
+    /* Header Selaras dengan Halaman Utama */
+    .app-header {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 26px;
-      padding: 16px 22px;
-      background: var(--bg-card);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+      gap: 14px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 13px;
+      gap: 12px;
       text-decoration: none;
       color: var(--text-main);
     }
 
     .brand-icon {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       border-radius: 12px;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.08));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(59, 130, 246, 0.16));
       border: 1px solid rgba(16, 185, 129, 0.42);
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--primary);
-      box-shadow: 0 0 22px var(--primary-glow);
+      box-shadow: 0 0 20px var(--primary-glow);
       flex-shrink: 0;
     }
 
@@ -128,43 +125,29 @@
       height: 22px;
     }
 
-    .brand-title-row {
+    .brand-text {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      flex-direction: column;
     }
 
-    .brand-name {
+    .brand-title {
+      font-size: 1.2rem;
       font-weight: 800;
-      font-size: 1.18rem;
       letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
     .brand-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16, 185, 129, 0.14);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      color: #6ee7b7;
-      padding: 3px 10px;
-      border-radius: 999px;
       font-size: 0.72rem;
-      font-weight: 700;
-      white-space: nowrap;
+      color: var(--primary);
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }
 
-    .brand-sub {
-      font-size: 0.76rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .topbar-actions {
+    .header-right {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
@@ -174,9 +157,9 @@
       align-items: center;
       justify-content: center;
       gap: 7px;
-      padding: 9px 15px;
+      padding: 9px 14px;
       border-radius: 10px;
-      font-size: 0.82rem;
+      font-size: 0.81rem;
       font-weight: 700;
       font-family: inherit;
       border: 1px solid transparent;
@@ -193,17 +176,17 @@
     }
     .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.38);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
     }
 
     .btn-outline {
       background: rgba(255, 255, 255, 0.04);
       color: var(--text-main);
-      border-color: var(--border);
+      border-color: var(--border-subtle);
     }
     .btn-outline:hover {
       background: rgba(255, 255, 255, 0.09);
-      border-color: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.18);
     }
 
     .btn-amber {
@@ -225,162 +208,253 @@
     }
 
     .btn-xs {
-      padding: 5px 10px;
+      padding: 6px 10px;
       font-size: 0.74rem;
       border-radius: 8px;
       gap: 5px;
     }
 
+    /* Card Utama Selaras index.html */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      margin-bottom: 20px;
+    }
+
     /* Login Card */
     .login-card {
       max-width: 440px;
-      margin: 56px auto;
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 32px 28px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      margin: 48px auto;
       text-align: center;
+      padding: 32px 26px;
     }
-    .login-icon {
-      width: 58px;
-      height: 58px;
+
+    .login-badge-circle {
+      width: 60px;
+      height: 60px;
       border-radius: 16px;
       margin: 0 auto 16px;
-      background: rgba(16, 185, 129, 0.14);
-      border: 1px solid rgba(16, 185, 129, 0.38);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.65rem;
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+      color: var(--primary);
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);
     }
+    .login-badge-circle svg {
+      width: 28px;
+      height: 28px;
+    }
+
     .login-card h1 {
-      font-size: 1.38rem;
+      font-size: 1.4rem;
       font-weight: 800;
       margin-bottom: 8px;
+      letter-spacing: -0.02em;
     }
+
     .login-card p {
-      font-size: 0.86rem;
+      font-size: 0.87rem;
       color: var(--text-muted);
       margin-bottom: 22px;
     }
-    .input {
+
+    .form-input {
       width: 100%;
-      padding: 12px 15px;
+      padding: 13px 15px;
       background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
       color: var(--text-main);
-      font-size: 0.92rem;
+      font-size: 0.94rem;
       font-family: inherit;
       margin-bottom: 14px;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .input:focus {
+    .form-input:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
     }
 
-    /* 5 Kartu Statistik */
+    /* Quick Action Bar & Web Push Banner */
+    .quick-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(15, 20, 30, 0.9));
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      border-radius: 16px;
+      margin-bottom: 18px;
+    }
+
+    .quick-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .push-dot-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .quick-bar-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .quick-bar-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .quick-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* 4 Kartu Statistik Proporsional (4 Kolom Desktop, 2x2 Mobile) */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 14px;
-      margin-bottom: 24px;
-    }
-    @media (max-width: 1180px) {
-      .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      }
+      margin-bottom: 20px;
     }
 
     .stat-card {
       background: var(--bg-card);
       backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      padding: 18px 20px;
-      position: relative;
-      overflow: hidden;
+      padding: 16px 18px;
       transition: transform 0.18s ease, border-color 0.18s ease;
     }
     .stat-card:hover {
       transform: translateY(-2px);
-      border-color: rgba(16, 185, 129, 0.3);
+      border-color: rgba(16, 185, 129, 0.32);
     }
+
     .stat-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
+
     .stat-label {
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: var(--text-muted);
     }
+
     .stat-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
+      font-size: 0.95rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
     }
+
     .stat-value {
-      font-size: 1.95rem;
+      font-size: 1.85rem;
       font-weight: 800;
       color: #ffffff;
       letter-spacing: -0.02em;
       line-height: 1.1;
     }
+
     .stat-sub {
-      font-size: 0.74rem;
+      font-size: 0.73rem;
       color: #6ee7b7;
       margin-top: 6px;
+    }
+
+    /* Segmented Main Tabs (Pengguna vs Riwayat Pesan) */
+    .main-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(9, 13, 20, 0.8);
+      border: 1px solid var(--border-subtle);
+      padding: 6px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+    }
+
+    .main-tab-btn {
+      flex: 1;
       display: flex;
       align-items: center;
-      gap: 5px;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
     }
 
-    /* Section Card */
-    .section-card {
-      background: var(--bg-card);
-      backdrop-filter: blur(18px);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 22px 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    .main-tab-btn.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.15));
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
 
+    /* Section Header & Filter Toolbar */
     .section-header {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
       margin-bottom: 16px;
       padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .section-title-group h2 {
-      font-size: 1.12rem;
+      font-size: 1.08rem;
       font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
+
     .section-title-group p {
-      font-size: 0.8rem;
+      font-size: 0.79rem;
       color: var(--text-muted);
     }
 
@@ -389,7 +463,7 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       margin-bottom: 16px;
     }
 
@@ -403,18 +477,15 @@
     .filter-pill {
       padding: 6px 12px;
       border-radius: 999px;
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       font-weight: 600;
+      font-family: inherit;
       background: rgba(255, 255, 255, 0.04);
       color: var(--text-muted);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       cursor: pointer;
-      transition: all 0.16s ease;
       white-space: nowrap;
-    }
-    .filter-pill:hover {
-      color: var(--text-main);
-      background: rgba(255, 255, 255, 0.08);
+      transition: all 0.16s ease;
     }
     .filter-pill.active {
       background: rgba(16, 185, 129, 0.16);
@@ -422,45 +493,38 @@
       border-color: rgba(16, 185, 129, 0.42);
     }
 
-    .search-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
     .search-box {
-      padding: 8px 14px;
+      padding: 9px 14px;
       background: var(--bg-input);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       border-radius: 10px;
       color: var(--text-main);
       font-size: 0.82rem;
       font-family: inherit;
-      min-width: 280px;
-      transition: border-color 0.2s;
+      min-width: 260px;
     }
     .search-box:focus {
       outline: none;
       border-color: var(--primary);
     }
 
-    /* Table Styling — Anti-Wrap & Rapi */
+    /* Tabel Desktop & Otomatis Menjadi Card di Mobile (Tanpa Terpotong!) */
     .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--border);
+      width: 100%;
+      border: 1px solid var(--border-subtle);
       border-radius: 14px;
-      background: rgba(7, 9, 14, 0.45);
+      background: rgba(6, 9, 15, 0.45);
+      overflow: hidden;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.83rem;
+      font-size: 0.82rem;
     }
 
     th, td {
-      padding: 13px 14px;
+      padding: 12px 13px;
       text-align: left;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       vertical-align: middle;
@@ -469,88 +533,75 @@
     th {
       color: var(--text-muted);
       font-weight: 700;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: rgba(255, 255, 255, 0.03);
-      white-space: nowrap;
+      letter-spacing: 0.04em;
+      background: rgba(255, 255, 255, 0.025);
     }
 
-    tbody tr {
-      transition: background 0.15s ease;
-    }
     tbody tr:hover td {
       background: rgba(16, 185, 129, 0.04);
     }
+
     tbody tr:last-child td {
       border-bottom: none;
     }
 
-    .nowrap {
-      white-space: nowrap;
-    }
-
-    /* User Profile Cell */
+    /* Elemen dalam Sel */
     .user-cell {
       display: flex;
       align-items: center;
-      gap: 11px;
-      min-width: 210px;
+      gap: 10px;
     }
+
     .avatar-sm {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid rgba(16, 185, 129, 0.4);
+      border: 1.5px solid rgba(16, 185, 129, 0.45);
       flex-shrink: 0;
     }
-    .user-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
+
     .user-name {
       font-weight: 700;
       color: #ffffff;
-      font-size: 0.86rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    .user-email {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: #6ee7b7;
-      white-space: nowrap;
+      font-size: 0.84rem;
+      display: block;
     }
 
-    /* Machine ID Pill + Copy */
+    .user-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      color: #6ee7b7;
+      display: block;
+      word-break: break-all;
+    }
+
     .machine-id-pill {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       background: rgba(245, 158, 11, 0.1);
       border: 1px solid rgba(245, 158, 11, 0.3);
-      padding: 5px 10px;
+      padding: 4px 8px;
       border-radius: 8px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       font-weight: 600;
       color: #fcd34d;
       white-space: nowrap;
     }
+
     .copy-mini-btn {
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #f3f4f6;
       border-radius: 5px;
       padding: 2px 6px;
-      font-size: 0.68rem;
+      font-size: 0.67rem;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.15s;
     }
     .copy-mini-btn:hover {
       background: var(--primary);
@@ -558,17 +609,15 @@
       border-color: var(--primary);
     }
 
-    /* Badges — Selalu 1 Baris (nowrap) */
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+      gap: 4px;
+      padding: 3px 9px;
       border-radius: 999px;
-      font-size: 0.73rem;
+      font-size: 0.71rem;
       font-weight: 700;
       white-space: nowrap;
-      line-height: 1.2;
     }
     .badge-active {
       background: rgba(16, 185, 129, 0.15);
@@ -593,63 +642,61 @@
 
     .sub-detail {
       display: block;
-      font-size: 0.71rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
-      margin-top: 3px;
-      white-space: nowrap;
+      margin-top: 2px;
     }
 
     .mono {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.77rem;
+      font-size: 0.75rem;
       color: #d1d5db;
     }
 
     .ip-chip {
       display: inline-block;
-      max-width: 165px;
+      max-width: 135px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       vertical-align: bottom;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.73rem;
+      font-size: 0.7rem;
       color: #9ca3af;
       background: rgba(255, 255, 255, 0.04);
-      padding: 2px 7px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 1px 6px;
+      border-radius: 5px;
     }
 
     .action-group {
       display: flex;
       align-items: center;
-      gap: 6px;
-      white-space: nowrap;
+      gap: 5px;
+      flex-wrap: wrap;
     }
 
     /* Modal Detail Pengguna */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(3, 6, 12, 0.78);
+      background: rgba(3, 6, 12, 0.8);
       backdrop-filter: blur(8px);
       z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
     }
 
     .modal-card {
       width: 100%;
-      max-width: 760px;
+      max-width: 720px;
       max-height: 90vh;
       overflow-y: auto;
-      background: #101520;
-      border: 1px solid rgba(16, 185, 129, 0.35);
+      background: #0f141e;
+      border: 1px solid var(--border-emerald);
       border-radius: 20px;
-      padding: 26px;
+      padding: 22px;
       box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75);
     }
 
@@ -658,110 +705,189 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 16px;
     }
 
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    @media (max-width: 640px) {
-      .detail-grid {
-        grid-template-columns: 1fr;
-      }
+      gap: 10px;
+      margin-bottom: 18px;
     }
 
     .detail-box {
       background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
-      padding: 12px 14px;
+      padding: 11px 13px;
     }
+
     .detail-box-label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--text-muted);
       margin-bottom: 4px;
     }
+
     .detail-box-value {
-      font-size: 0.86rem;
+      font-size: 0.84rem;
       font-weight: 600;
       color: #fff;
       word-break: break-all;
     }
 
-    /* Toast Notification */
+    /* Toast Selaras index.html */
     .toast {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #101520;
-      border: 1px solid rgba(16, 185, 129, 0.45);
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111827;
+      border: 1px solid rgba(16, 185, 129, 0.5);
       color: #ecfdf5;
-      padding: 12px 18px;
-      border-radius: 12px;
+      padding: 11px 18px;
+      border-radius: 999px;
       font-size: 0.84rem;
       font-weight: 600;
-      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
       z-index: 2000;
-      transition: all 0.25s ease;
-      max-width: calc(100vw - 32px);
+      max-width: calc(100vw - 28px);
+      text-align: center;
     }
 
-    /* Responsive Mobile & Tablet untuk Dashboard Admin PWA */
-    @media (max-width: 768px) {
-      .container {
-        padding: 12px 12px 48px;
+    /* ============================================================================
+       RESPONSIVE DESIGN: TABLET & MOBILE CARD VIEW (<= 880px)
+       Mengubah baris tabel menjadi Kartu Mobile Native agar tidak ada yang terpotong!
+       ============================================================================ */
+    @media (max-width: 880px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
       }
 
-      .topbar {
+      .table-wrap {
+        border: none;
+        background: transparent;
+      }
+
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+
+      thead tr {
+        display: none;
+      }
+
+      tbody tr {
+        background: rgba(9, 13, 20, 0.75);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+
+      tbody tr td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        text-align: right;
+      }
+
+      tbody tr td:first-child {
+        padding-top: 0;
+      }
+
+      tbody tr td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+        padding-top: 10px;
+      }
+
+      tbody tr td::before {
+        content: attr(data-label);
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      .user-cell {
+        text-align: left;
+      }
+
+      .action-group {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-container {
+        padding: 14px 12px 44px;
+      }
+
+      .app-header {
         flex-direction: column;
         align-items: stretch;
-        padding: 14px 15px;
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 10px;
       }
 
-      .topbar-actions {
+      .header-right {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
         width: 100%;
       }
 
-      .topbar-actions .btn {
+      .header-right .btn {
         width: 100%;
         padding: 9px 10px;
         font-size: 0.76rem;
       }
 
-      .stats-grid {
+      .quick-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px;
+      }
+
+      .quick-bar-actions {
+        display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        width: 100%;
       }
 
-      .stat-card {
-        padding: 14px 15px;
+      .quick-bar-actions .btn {
+        width: 100%;
       }
 
-      .stat-value {
-        font-size: 1.55rem;
-      }
-
-      .section-card {
+      .card {
         padding: 16px 14px;
         border-radius: 16px;
+      }
+
+      .main-tabs {
+        flex-direction: row;
+      }
+
+      .main-tab-btn {
+        font-size: 0.78rem;
+        padding: 9px 8px;
       }
 
       .toolbar-row {
         flex-direction: column;
         align-items: stretch;
-        gap: 10px;
       }
 
       .filter-pills {
@@ -770,125 +896,110 @@
         padding-bottom: 4px;
       }
 
-      .search-group,
       .search-box {
         width: 100%;
         min-width: 0;
       }
 
-      .modal-card {
-        padding: 18px 15px;
-      }
-
-      .toast {
-        left: 16px;
-        right: 16px;
-        bottom: 16px;
-        text-align: center;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      .topbar-actions {
+      .detail-grid {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <div class="bg-glow bg-glow-1"></div>
-  <div class="bg-glow bg-glow-2"></div>
+  <div class="ambient-bg">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+  </div>
 
-  <div class="container">
-    <!-- Topbar Selaras dengan Konsep Utama -->
-    <header class="topbar">
-      <div class="brand">
+  <div class="app-container">
+    <!-- Header Selaras dengan index.html -->
+    <header class="app-header">
+      <a href="/admin" class="brand">
         <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <circle cx="12" cy="16" r="1"></circle>
           </svg>
         </div>
-        <div>
-          <div class="brand-title-row">
-            <span class="brand-name">PesanRahasia</span>
-            <span class="brand-badge">🛡️ Control Center & Lisensi VOC ML</span>
-          </div>
-          <div class="brand-sub">Monitoring Akun Gmail, Lisensi Per-User (Skema C), & Audit Link E2EE</div>
+        <div class="brand-text">
+          <span class="brand-title">PesanRahasia</span>
+          <span class="brand-badge">Admin Control • Lisensi VOC ML</span>
         </div>
-      </div>
+      </a>
 
-      <div class="topbar-actions">
-        <button type="button" id="admin-pwa-install-btn" class="btn btn-primary hidden" title="Install Dashboard Admin sebagai Aplikasi PWA di HP / Laptop">
-          📲 Install Aplikasi Admin
-        </button>
-        <button type="button" id="enable-push-btn" class="btn btn-primary hidden" title="Aktifkan Web Push Notification di HP ini saat ada pendaftar baru">
-          🔔 Aktifkan Notifikasi HP
-        </button>
-        <button type="button" id="test-push-btn" class="btn btn-outline hidden" title="Kirim simulasi notifikasi pendaftar baru ke HP Admin">
-          📨 Tes Notifikasi
+      <div class="header-right">
+        <button type="button" id="admin-pwa-install-btn" class="btn btn-primary hidden">
+          📲 Install PWA Admin
         </button>
         <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" id="vocml-link-btn" class="btn btn-amber hidden">
-          🔑 Buka Server Lisensi VOC ML ↗
+          🔑 Panel VOC ML ↗
         </a>
-        <button id="sync-all-btn" class="btn btn-outline hidden">
-          🔄 Sinkron Lisensi VOC ML
-        </button>
-        <button id="refresh-btn" class="btn btn-outline hidden">
-          ⚡ Refresh Data
-        </button>
         <a href="/" class="btn btn-outline">
-          ← Ke Halaman Aplikasi
+          ← Ke Aplikasi
         </a>
         <button id="admin-logout-btn" class="btn btn-danger hidden">
-          Keluar Admin
+          Keluar
         </button>
       </div>
     </header>
 
-    <!-- Login Admin -->
-    <section id="admin-login-section" class="login-card">
-      <div class="login-icon">🔐</div>
+    <!-- Login Admin (Tanpa Placeholder Password) -->
+    <section id="admin-login-section" class="card login-card">
+      <div class="login-badge-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <circle cx="12" cy="16" r="1"></circle>
+        </svg>
+      </div>
       <h1>Login Panel Admin</h1>
-      <p>Masukkan password Administrator untuk memantau pengguna Gmail, status lisensi VOC ML, dan riwayat link rahasia.</p>
+      <p>Masukkan password Administrator untuk memantau pengguna Gmail, kuota Trial 10x, dan lisensi VOC ML.</p>
       <form id="admin-login-form">
-        <input type="password" id="admin-password" class="input" autocomplete="current-password" required />
-        <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">
+        <input type="password" id="admin-password" class="form-input" autocomplete="current-password" required />
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:13px;">
           Masuk ke Dashboard Admin
         </button>
       </form>
       <p id="login-error" style="color:#f87171; font-size:0.82rem; margin-top:12px;" class="hidden"></p>
     </section>
 
-    <!-- Konten Dashboard Admin -->
+    <!-- Konten Utama Dashboard Admin -->
     <main id="admin-dashboard-section" class="hidden">
-      <!-- Bar Status Web Push Notifikasi Pendaftar Baru -->
-      <div id="push-status-banner" class="section-card" style="padding:14px 20px; margin-bottom:18px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; border-color:rgba(16,185,129,0.3);">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <span style="font-size:1.35rem;">📲</span>
+      <!-- Bar Web Push Notification & Sinkronisasi Cepat -->
+      <div class="quick-bar">
+        <div class="quick-bar-left">
+          <div class="push-dot-icon">🔔</div>
           <div>
-            <div style="font-weight:700; font-size:0.9rem; color:#fff;" id="push-banner-title">
-              Notifikasi Pendaftar Baru (Web Push PWA)
+            <div class="quick-bar-title">
+              <span>Notifikasi Pendaftar Baru (Web Push HP)</span>
+              <span id="push-sub-badge" class="badge badge-pending">⏳ Belum Aktif</span>
             </div>
-            <div style="font-size:0.78rem; color:var(--text-muted);" id="push-banner-desc">
-              Aktifkan notifikasi agar handphone Anda berbunyi otomatis setiap ada pengguna Gmail baru yang mendaftar.
+            <div class="quick-bar-sub" id="push-banner-desc">
+              Terima notifikasi otomatis di HP Anda setiap ada pendaftar Gmail baru atau kuota Trial 10x habis.
             </div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span id="push-sub-badge" class="badge badge-pending">⏳ Belum Diaktifkan di Perangkat Ini</span>
-          <button type="button" id="banner-enable-push-btn" class="btn btn-primary btn-xs" style="padding:7px 13px;">
-            🔔 Aktifkan Web Push Sekarang
+
+        <div class="quick-bar-actions">
+          <button type="button" id="banner-enable-push-btn" class="btn btn-primary btn-xs">
+            🔔 Aktifkan Notifikasi HP
           </button>
-          <button type="button" id="banner-test-push-btn" class="btn btn-outline btn-xs" style="padding:7px 13px;">
-            📨 Kirim Tes ke HP
+          <button type="button" id="banner-test-push-btn" class="btn btn-outline btn-xs">
+            📨 Tes Push HP
+          </button>
+          <button type="button" id="sync-all-btn" class="btn btn-amber btn-xs">
+            🔄 Sinkron VOC ML
+          </button>
+          <button type="button" id="refresh-btn" class="btn btn-outline btn-xs">
+            ⚡ Refresh
           </button>
         </div>
       </div>
-      <!-- 5 Kartu Statistik Detail -->
+
+      <!-- 4 Kartu Statistik Proporsional -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-top">
@@ -896,7 +1007,7 @@
             <span class="stat-icon">👥</span>
           </div>
           <div class="stat-value" id="stat-total-users">0</div>
-          <div class="stat-sub">Akun @gmail.com terdaftar</div>
+          <div class="stat-sub" id="stat-active-sub">0 aktif 24 jam terakhir</div>
         </div>
 
         <div class="stat-card">
@@ -905,16 +1016,7 @@
             <span class="stat-icon">🔑</span>
           </div>
           <div class="stat-value" id="stat-licensed-users">0</div>
-          <div class="stat-sub" id="stat-unlicensed-sub">0 menunggu aktivasi</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-top">
-            <span class="stat-label">Pengguna Aktif (24 Jam)</span>
-            <span class="stat-icon">🟢</span>
-          </div>
-          <div class="stat-value" id="stat-active-today">0</div>
-          <div class="stat-sub">Login / kirim pesan hari ini</div>
+          <div class="stat-sub" id="stat-unlicensed-sub">0 mode Trial / menunggu</div>
         </div>
 
         <div class="stat-card">
@@ -932,22 +1034,30 @@
             <span class="stat-icon">🔥</span>
           </div>
           <div class="stat-value" id="stat-destroyed-messages">0</div>
-          <div class="stat-sub" id="stat-expired-sub">Otomatis terhapus permanen</div>
+          <div class="stat-sub" id="stat-expired-sub">0 kedaluwarsa otomatis</div>
         </div>
       </div>
 
-      <!-- Tabel 1: Daftar Semua Pengguna Gmail & Lisensi VOC ML -->
-      <div class="section-card">
+      <!-- Tab Switcher agar Tampilan Bersih & Fokus seperti Aplikasi Utama -->
+      <div class="main-tabs">
+        <button type="button" class="main-tab-btn active" id="tab-btn-users">
+          👥 Daftar Pengguna & Lisensi (<span id="tab-count-users">0</span>)
+        </button>
+        <button type="button" class="main-tab-btn" id="tab-btn-logs">
+          🕵️ Riwayat Aktivitas Pesan (<span id="tab-count-logs">0</span>)
+        </button>
+      </div>
+
+      <!-- PANEL TAB 1: DAFTAR PENGGUNA GMAIL & LISENSI -->
+      <section id="panel-users" class="card">
         <div class="section-header">
           <div class="section-title-group">
-            <h2>📋 Daftar Pengguna Aplikasi & Lisensi Akun (Skema C)</h2>
-            <p>Setiap akun Gmail otomatis memiliki Machine ID unik (<code>GMAIL-XXXX-XXXX-XXXX</code>) yang terhubung ke <strong>vocml.vocpos.id</strong>.</p>
+            <h2>📋 Pengguna Gmail, Trial 10x & Lisensi VOC ML</h2>
+            <p>Pendaftar baru otomatis mendapat <strong>Trial 10x Pesan Gratis</strong> sebelum terkunci & wajib aktivasi di <strong>vocml.vocpos.id</strong>.</p>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="export-csv-btn" class="btn btn-primary btn-xs" style="padding:8px 13px; font-size:0.78rem;">
-              📥 Export CSV Pengguna
-            </button>
-          </div>
+          <button id="export-csv-btn" class="btn btn-primary btn-xs">
+            📥 Export CSV Pengguna
+          </button>
         </div>
 
         <div class="toolbar-row">
@@ -958,44 +1068,38 @@
             <button type="button" class="filter-pill" data-filter="expired">🛑 Trial Habis / Terkunci</button>
           </div>
 
-          <div class="search-group">
-            <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, ID Lisensi, atau IP..." />
-          </div>
+          <input type="text" id="user-search" class="search-box" placeholder="🔍 Cari nama, email Gmail, ID Lisensi, atau IP..." />
         </div>
 
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>No</th>
-                <th>Pengguna & Email Gmail</th>
+                <th>Pengguna & Gmail</th>
                 <th>ID Lisensi (VOC ML)</th>
-                <th>Status & Masa Aktif</th>
-                <th>Total Pesan</th>
-                <th>Perangkat & IP Terakhir</th>
-                <th>Waktu Bergabung & Aktif</th>
-                <th>Aksi Detail</th>
+                <th>Status & Kuota Trial</th>
+                <th>Pesan & Perangkat</th>
+                <th>Waktu Aktif</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="users-table-body">
-              <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat data pengguna...</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat data pengguna...</td></tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <!-- Tabel 2: Riwayat Aktivitas Link Pesan -->
-      <div class="section-card">
+      <!-- PANEL TAB 2: RIWAYAT AKTIVITAS LINK PESAN -->
+      <section id="panel-logs" class="card hidden">
         <div class="section-header">
           <div class="section-title-group">
             <h2>🕵️ Riwayat Aktivitas Link Pesan Rahasia</h2>
-            <p>Memantau siapa yang membuat link rahasia, mode proteksi, kapan dibuka, serta IP & perangkat pembuka (isi pesan tetap terenkripsi E2EE).</p>
+            <p>Audit pengirim link, mode proteksi, status penghancuran pesan, dan perangkat pembuka.</p>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="export-logs-csv-btn" class="btn btn-outline btn-xs" style="padding:8px 13px; font-size:0.78rem;">
-              📥 Export CSV Riwayat Pesan
-            </button>
-          </div>
+          <button id="export-logs-csv-btn" class="btn btn-outline btn-xs">
+            📥 Export CSV Riwayat
+          </button>
         </div>
 
         <div class="toolbar-row">
@@ -1006,9 +1110,7 @@
             <button type="button" class="filter-pill" data-filter="expired">⌛ Kedaluwarsa</button>
           </div>
 
-          <div class="search-group">
-            <input type="text" id="log-search" class="search-box" placeholder="🔍 Cari ID Link, email pengirim, atau IP pembuka..." />
-          </div>
+          <input type="text" id="log-search" class="search-box" placeholder="🔍 Cari ID Link, email pengirim, atau IP pembuka..." />
         </div>
 
         <div class="table-wrap">
@@ -1017,20 +1119,18 @@
               <tr>
                 <th>ID Link</th>
                 <th>Pengirim (Gmail)</th>
-                <th>Mode Proteksi</th>
+                <th>Proteksi & Timer</th>
                 <th>Status Pesan</th>
-                <th>Waktu Dibuat</th>
-                <th>Waktu Dibuka / Hancur</th>
-                <th>Pembuka (IP & Perangkat)</th>
-                <th>Aksi</th>
+                <th>Waktu Dibuat & Dibuka</th>
+                <th>Pembuka & Aksi</th>
               </tr>
             </thead>
             <tbody id="logs-table-body">
-              <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat riwayat aktivitas...</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Memuat riwayat aktivitas...</td></tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </main>
   </div>
 
@@ -1039,9 +1139,9 @@
     <div class="modal-card">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:12px;">
-          <img id="modal-user-avatar" src="" class="avatar-sm" style="width:46px; height:46px;" alt="" />
+          <img id="modal-user-avatar" src="" class="avatar-sm" style="width:44px; height:44px;" alt="" />
           <div>
-            <h3 id="modal-user-name" style="font-size:1.1rem; font-weight:800;">-</h3>
+            <h3 id="modal-user-name" style="font-size:1.05rem; font-weight:800;">-</h3>
             <span id="modal-user-email" class="user-email">-</span>
           </div>
         </div>
@@ -1058,7 +1158,7 @@
         </div>
 
         <div class="detail-box">
-          <div class="detail-box-label">Status & Masa Aktif Lisensi</div>
+          <div class="detail-box-label">Status & Kuota Trial / Lisensi</div>
           <div class="detail-box-value" id="modal-user-license">-</div>
         </div>
 
@@ -1074,12 +1174,12 @@
 
         <div class="detail-box" style="grid-column: 1 / -1;">
           <div class="detail-box-label">Detail Browser & Perangkat (User-Agent)</div>
-          <div class="detail-box-value mono" style="font-size:0.75rem; color:var(--text-muted);" id="modal-user-ua">-</div>
+          <div class="detail-box-value mono" style="font-size:0.74rem; color:var(--text-muted);" id="modal-user-ua">-</div>
         </div>
       </div>
 
-      <div style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
-        <h4 style="font-size:0.9rem; font-weight:700;">📨 Riwayat Link Pesan dari Pengguna Ini</h4>
+      <div style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <h4 style="font-size:0.88rem; font-weight:700;">📨 Riwayat Link Pesan dari Pengguna Ini</h4>
         <a href="https://vocml.vocpos.id" target="_blank" rel="noopener" class="btn btn-amber btn-xs">
           🔑 Kelola Lisensi di VOC ML ↗
         </a>
@@ -1092,8 +1192,8 @@
               <th>ID Link</th>
               <th>Mode</th>
               <th>Status</th>
-              <th>Waktu Dibuat</th>
-              <th>Waktu Dibuka</th>
+              <th>Dibuat</th>
+              <th>Dibuka</th>
             </tr>
           </thead>
           <tbody id="modal-user-logs-body">
@@ -1120,13 +1220,18 @@
       const syncAllBtn = document.getElementById('sync-all-btn');
       const refreshBtn = document.getElementById('refresh-btn');
       const logoutBtn = document.getElementById('admin-logout-btn');
-      const enablePushBtn = document.getElementById('enable-push-btn');
-      const testPushBtn = document.getElementById('test-push-btn');
       const bannerEnablePushBtn = document.getElementById('banner-enable-push-btn');
       const bannerTestPushBtn = document.getElementById('banner-test-push-btn');
       const pushSubBadge = document.getElementById('push-sub-badge');
       const pushBannerDesc = document.getElementById('push-banner-desc');
       const adminPwaInstallBtn = document.getElementById('admin-pwa-install-btn');
+
+      const tabBtnUsers = document.getElementById('tab-btn-users');
+      const tabBtnLogs = document.getElementById('tab-btn-logs');
+      const panelUsers = document.getElementById('panel-users');
+      const panelLogs = document.getElementById('panel-logs');
+      const tabCountUsers = document.getElementById('tab-count-users');
+      const tabCountLogs = document.getElementById('tab-count-logs');
 
       const userSearchInput = document.getElementById('user-search');
       const logSearchInput = document.getElementById('log-search');
@@ -1134,9 +1239,9 @@
       const exportLogsCsvBtn = document.getElementById('export-logs-csv-btn');
 
       const statTotalUsers = document.getElementById('stat-total-users');
+      const statActiveSub = document.getElementById('stat-active-sub');
       const statLicensedUsers = document.getElementById('stat-licensed-users');
       const statUnlicensedSub = document.getElementById('stat-unlicensed-sub');
-      const statActiveToday = document.getElementById('stat-active-today');
       const statTotalMessages = document.getElementById('stat-total-messages');
       const statPendingSub = document.getElementById('stat-pending-sub');
       const statDestroyedMessages = document.getElementById('stat-destroyed-messages');
@@ -1157,6 +1262,37 @@
       let lastKnownUserEmails = null;
       let swReg = null;
 
+      function showToast(msg) {
+        adminToast.textContent = msg;
+        adminToast.classList.remove('hidden');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => adminToast.classList.add('hidden'), 3200);
+      }
+
+      function getAdminToken() {
+        return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+      }
+
+      function setAdminToken(token) {
+        if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+        else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      }
+
+      // Tab Switching
+      tabBtnUsers.addEventListener('click', () => {
+        tabBtnUsers.classList.add('active');
+        tabBtnLogs.classList.remove('active');
+        panelUsers.classList.remove('hidden');
+        panelLogs.classList.add('hidden');
+      });
+
+      tabBtnLogs.addEventListener('click', () => {
+        tabBtnLogs.classList.add('active');
+        tabBtnUsers.classList.remove('active');
+        panelLogs.classList.remove('hidden');
+        panelUsers.classList.add('hidden');
+      });
+
       function playNotificationChime() {
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1174,7 +1310,7 @@
             osc.stop(now + idx * 0.14 + 0.36);
           });
         } catch {
-          // Abaikan jika browser memblokir autoplay audio
+          // Abaikan
         }
       }
 
@@ -1204,13 +1340,12 @@
 
           if (existingSub && Notification.permission === 'granted') {
             pushSubBadge.className = 'badge badge-active';
-            pushSubBadge.textContent = `🔔 Web Push Aktif (${subscriberCount || 1} Perangkat)`;
-            enablePushBtn.textContent = '🔔 Web Push Aktif';
-            bannerEnablePushBtn.textContent = '🔄 Perbarui Langganan Push';
-            pushBannerDesc.textContent = 'Notifikasi Web Push aktif di perangkat ini. Handphone/browser Anda akan langsung berbunyi saat ada pendaftar baru.';
+            pushSubBadge.textContent = `✓ Aktif (${subscriberCount || 1} HP/Perangkat)`;
+            bannerEnablePushBtn.textContent = '🔄 Perbarui Push';
+            pushBannerDesc.textContent = 'Web Push aktif! Handphone Anda akan langsung berbunyi saat ada pendaftar Gmail baru.';
           } else {
             pushSubBadge.className = 'badge badge-pending';
-            pushSubBadge.textContent = `⏳ Belum Aktif di Perangkat Ini (${subscriberCount || 0} Terdaftar)`;
+            pushSubBadge.textContent = `⏳ Belum Aktif (${subscriberCount || 0} Terdaftar)`;
           }
         } catch {
           // Abaikan
@@ -1222,7 +1357,7 @@
         if (!token) return;
 
         if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-          alert('Browser ini belum mendukung Web Push Notification. Jika menggunakan iPhone (iOS), klik "Install Aplikasi Admin" / "Add to Home Screen" terlebih dahulu lalu buka dari layar utama.');
+          alert('Untuk mengaktifkan Web Push di iPhone/iPad:\n1. Ketuk Share di Safari -> "Add to Home Screen".\n2. Buka aplikasi PR Admin dari layar utama HP Anda lalu klik tombol ini lagi.');
           return;
         }
 
@@ -1279,27 +1414,11 @@
             playNotificationChime();
             showToast(`📨 Notifikasi tes terkirim ke ${data.sent} perangkat Admin!`);
           } else {
-            showToast('⚠️ Belum ada perangkat yang mengaktifkan Web Push. Klik "Aktifkan Web Push Sekarang" terlebih dahulu.');
+            showToast('⚠️ Klik "Aktifkan Notifikasi HP" terlebih dahulu.');
           }
         } catch {
           showToast('⚠️ Gagal mengirim tes notifikasi.');
         }
-      }
-
-      function showToast(msg) {
-        adminToast.textContent = msg;
-        adminToast.classList.remove('hidden');
-        clearTimeout(showToast._t);
-        showToast._t = setTimeout(() => adminToast.classList.add('hidden'), 3200);
-      }
-
-      function getAdminToken() {
-        return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
-      }
-
-      function setAdminToken(token) {
-        if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
-        else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
       }
 
       function formatDate(d) {
@@ -1311,12 +1430,12 @@
       }
 
       function formatExpiryInfo(expiresAt) {
-        if (!expiresAt) return 'Belum ditentukan';
+        if (!expiresAt) return 'Unlimited / Aktif';
         const exp = new Date(expiresAt);
         if (isNaN(exp.getTime())) return String(expiresAt);
         const diffDays = Math.ceil((exp.getTime() - Date.now()) / 86400000);
         const dateStr = exp.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-        if (diffDays > 0) return `s/d ${dateStr} (${diffDays} hari lagi)`;
+        if (diffDays > 0) return `s/d ${dateStr} (${diffDays} hr)`;
         return `Habis ${dateStr}`;
       }
 
@@ -1345,31 +1464,41 @@
 
         if (st === 'active' || st === 'expiring') {
           return `
-            <span class="badge badge-active">✅ Lisensi Pro Aktif</span>
-            <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+            <div>
+              <span class="badge badge-active">✅ Lisensi Pro</span>
+              <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+            </div>
           `;
         }
         if (st === 'expired') {
           return `
-            <span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>
-            <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+            <div>
+              <span class="badge badge-destroyed">⌛ Masa Aktif Habis</span>
+              <span class="sub-detail">${formatExpiryInfo(u.licenseExpiresAt)}</span>
+            </div>
           `;
         }
         if (st === 'locked') {
           return `
-            <span class="badge badge-destroyed">🔒 Dikunci VOC ML</span>
-            <span class="sub-detail">Perlu dibuka di VOC ML</span>
+            <div>
+              <span class="badge badge-destroyed">🔒 Dikunci VOC ML</span>
+              <span class="sub-detail">Dibuka dari VOC ML</span>
+            </div>
           `;
         }
         if (used >= 10 || st === 'trial_exhausted') {
           return `
-            <span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>
-            <span class="sub-detail">Menunggu aktivasi berbayar</span>
+            <div>
+              <span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>
+              <span class="sub-detail">Wajib aktivasi berbayar</span>
+            </div>
           `;
         }
         return `
-          <span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>
-          <span class="sub-detail">Sisa ${rem} pesan gratis</span>
+          <div>
+            <span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>
+            <span class="sub-detail">Sisa ${rem} pesan gratis</span>
+          </div>
         `;
       }
 
@@ -1392,12 +1521,12 @@
         });
 
         if (filtered.length === 0) {
-          usersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Tidak ada data pengguna Gmail yang sesuai filter.</td></tr>';
+          usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Tidak ada data pengguna Gmail yang sesuai filter.</td></tr>';
           return;
         }
 
         usersTableBody.innerHTML = filtered
-          .map((u, idx) => {
+          .map((u) => {
             const avatar = u.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email)}&background=10b981&color=04130d&bold=true`;
             const userLogs = allLogs.filter((l) => l.senderEmail === u.email);
             const destroyedCount = userLogs.filter((l) => l.status === 'destroyed').length;
@@ -1405,44 +1534,43 @@
 
             return `
               <tr>
-                <td class="nowrap" style="color:var(--text-muted); font-weight:600;">${idx + 1}</td>
-                <td>
+                <td data-label="Pengguna & Gmail">
                   <div class="user-cell">
                     <img src="${avatar}" class="avatar-sm" alt="" />
-                    <div class="user-meta">
+                    <div>
                       <span class="user-name">${u.name || '-'}</span>
                       <span class="user-email">${u.email}</span>
                     </div>
                   </div>
                 </td>
-                <td class="nowrap">
+                <td data-label="ID Lisensi VOC ML">
                   <div class="machine-id-pill">
                     <span>${machineId}</span>
                     <button type="button" class="copy-mini-btn js-copy-machine" data-machine="${machineId}">Salin</button>
                   </div>
                 </td>
-                <td class="nowrap">
+                <td data-label="Status & Kuota">
                   ${licenseBadgeHtml(u)}
                 </td>
-                <td class="nowrap">
-                  <strong style="color:#fff; font-size:0.9rem;">${u.messagesCreated || 0}</strong> <span style="color:var(--text-muted);">pesan</span>
-                  <span class="sub-detail">🔥 ${destroyedCount} sudah dibuka</span>
+                <td data-label="Pesan & Perangkat">
+                  <div>
+                    <strong>${u.messagesCreated || 0}</strong> pesan <span style="color:var(--text-muted);">(${destroyedCount} dibuka)</span>
+                    <span class="sub-detail">${shortUA(u.userAgent)} • <span class="ip-chip" title="${u.lastIp || '-'}">${u.lastIp || '-'}</span></span>
+                  </div>
                 </td>
-                <td class="nowrap">
-                  <div style="font-weight:600; font-size:0.8rem;">${shortUA(u.userAgent)}</div>
-                  <span class="ip-chip" title="IP Terakhir: ${u.lastIp || '-'}">${u.lastIp || '-'}</span>
+                <td data-label="Waktu Aktif">
+                  <div>
+                    <div style="font-size:0.77rem;">${formatDate(u.lastLoginAt)}</div>
+                    <span class="sub-detail">Daftar: ${formatDate(u.createdAt)}</span>
+                  </div>
                 </td>
-                <td class="nowrap">
-                  <div style="font-size:0.78rem; color:#e5e7eb;">Aktif: ${formatDate(u.lastLoginAt)}</div>
-                  <span class="sub-detail">Gabung: ${formatDate(u.createdAt)}</span>
-                </td>
-                <td class="nowrap">
+                <td data-label="Aksi">
                   <div class="action-group">
                     <button type="button" class="btn btn-outline btn-xs js-user-detail" data-email="${u.email}">
                       🔍 Detail
                     </button>
-                    <button type="button" class="btn btn-amber btn-xs js-sync-user" data-email="${u.email}" title="Cek ulang status lisensi akun ini ke server VOC ML">
-                      🔄 Cek Lisensi
+                    <button type="button" class="btn btn-amber btn-xs js-sync-user" data-email="${u.email}" title="Sinkronkan lisensi ke VOC ML">
+                      🔄 Cek
                     </button>
                     <button type="button" class="btn btn-danger btn-xs js-delete-user" data-id="${u.id}" data-email="${u.email}" title="Hapus pengguna">
                       🗑️
@@ -1469,7 +1597,7 @@
         });
 
         if (filtered.length === 0) {
-          logsTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px;">Belum ada riwayat aktivitas link pesan yang sesuai filter.</td></tr>';
+          logsTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px;">Belum ada riwayat aktivitas link pesan yang sesuai filter.</td></tr>';
           return;
         }
 
@@ -1486,38 +1614,43 @@
 
             return `
               <tr>
-                <td class="nowrap">
-                  <span class="mono" style="color:#6ee7b7; font-weight:700;">${l.id}</span>
+                <td data-label="ID Link">
+                  <span class="mono" style="color:#6ee7b7; font-weight:700;">#${l.id}</span>
                 </td>
-                <td class="nowrap">
-                  <div style="font-weight:700; color:#fff;">${l.senderName || '-'}</div>
-                  <span class="user-email">${l.senderEmail}</span>
+                <td data-label="Pengirim (Gmail)">
+                  <div>
+                    <strong style="color:#fff;">${l.senderName || '-'}</strong>
+                    <span class="user-email">${l.senderEmail}</span>
+                  </div>
                 </td>
-                <td class="nowrap">
-                  <div style="font-weight:600;">${modeLabel}</div>
-                  <span class="sub-detail">⏱️ Timer baca: ${l.viewTimerSeconds} detik</span>
+                <td data-label="Proteksi & Timer">
+                  <div>
+                    <div>${modeLabel}</div>
+                    <span class="sub-detail">⏱️ Timer: ${l.viewTimerSeconds} detik</span>
+                  </div>
                 </td>
-                <td class="nowrap">${badgeHtml}</td>
-                <td class="nowrap">
-                  <div>${formatDate(l.createdAt)}</div>
-                  <span class="sub-detail">Batas: ${formatDate(l.expiresAt)}</span>
+                <td data-label="Status Pesan">${badgeHtml}</td>
+                <td data-label="Dibuat & Dibuka">
+                  <div>
+                    <div style="font-size:0.76rem;">Dibuat: ${formatDate(l.createdAt)}</div>
+                    <span class="sub-detail">${l.openedAt ? `🔥 Dibuka: ${formatDate(l.openedAt)}` : 'Belum dibuka'}</span>
+                  </div>
                 </td>
-                <td class="nowrap">
-                  ${l.openedAt ? `<strong style="color:#fca5a5;">${formatDate(l.openedAt)}</strong>` : '<span style="color:var(--text-muted);">Belum dibuka</span>'}
-                </td>
-                <td class="nowrap">
-                  ${
-                    l.openerIp
-                      ? `<div>${shortUA(l.openerUserAgent)}</div><span class="ip-chip" title="${l.openerIp}">${l.openerIp}</span>`
-                      : '<span style="color:var(--text-muted);">-</span>'
-                  }
-                </td>
-                <td class="nowrap">
-                  ${
-                    l.status === 'pending'
-                      ? `<button type="button" class="btn btn-danger btn-xs js-destroy-msg" data-id="${l.id}">🔥 Hancurkan</button>`
-                      : `<span style="font-size:0.73rem; color:var(--text-muted);">Selesai</span>`
-                  }
+                <td data-label="Pembuka & Aksi">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;">
+                    <div>
+                      ${
+                        l.openerIp
+                          ? `<div style="font-size:0.75rem;">${shortUA(l.openerUserAgent)}</div><span class="ip-chip" title="${l.openerIp}">${l.openerIp}</span>`
+                          : '<span style="color:var(--text-muted); font-size:0.75rem;">-</span>'
+                      }
+                    </div>
+                    ${
+                      l.status === 'pending'
+                        ? `<button type="button" class="btn btn-danger btn-xs js-destroy-msg" data-id="${l.id}">🔥 Hancurkan</button>`
+                        : ''
+                    }
+                  </div>
                 </td>
               </tr>
             `;
@@ -1553,11 +1686,11 @@
           modalLogsBody.innerHTML = userLogs
             .map((l) => `
               <tr>
-                <td class="mono" style="color:#6ee7b7;">${l.id}</td>
-                <td>${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'} (${l.viewTimerSeconds}s)</td>
-                <td>${l.status === 'destroyed' ? '🔥 Hancur' : l.status === 'expired' ? '⌛ Expired' : '⏳ Menunggu'}</td>
-                <td>${formatDate(l.createdAt)}</td>
-                <td>${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
+                <td data-label="ID Link" class="mono" style="color:#6ee7b7;">#${l.id}</td>
+                <td data-label="Mode">${l.protectionMode === 'hold' ? '👆 Hold' : '🔦 Spotlight'} (${l.viewTimerSeconds}s)</td>
+                <td data-label="Status">${l.status === 'destroyed' ? '🔥 Hancur' : l.status === 'expired' ? '⌛ Expired' : '⏳ Menunggu'}</td>
+                <td data-label="Dibuat">${formatDate(l.createdAt)}</td>
+                <td data-label="Dibuka">${l.openedAt ? formatDate(l.openedAt) : '-'}</td>
               </tr>
             `)
             .join('');
@@ -1589,9 +1722,9 @@
       function updateDashboardState(data) {
         const st = data.stats || {};
         statTotalUsers.textContent = st.totalUsers ?? 0;
+        statActiveSub.textContent = `🟢 ${st.activeUsersToday ?? 0} aktif 24 jam terakhir`;
         statLicensedUsers.textContent = st.licensedUsers ?? 0;
-        statUnlicensedSub.textContent = `${st.unlicensedUsers ?? 0} menunggu aktivasi / habis`;
-        statActiveToday.textContent = st.activeUsersToday ?? 0;
+        statUnlicensedSub.textContent = `${st.unlicensedUsers ?? 0} mode Trial / menunggu`;
         statTotalMessages.textContent = st.totalMessages ?? 0;
         statPendingSub.textContent = `${st.pendingMessages ?? 0} menunggu dibuka`;
         statDestroyedMessages.textContent = st.destroyedMessages ?? 0;
@@ -1610,6 +1743,8 @@
 
         allUsers = newUsersList;
         allLogs = data.logs || [];
+        tabCountUsers.textContent = allUsers.length;
+        tabCountLogs.textContent = allLogs.length;
         renderUsersTable();
         renderLogsTable();
       }
@@ -1620,7 +1755,7 @@
 
         syncAllBtn.disabled = true;
         const origText = syncAllBtn.textContent;
-        syncAllBtn.textContent = '⏳ Menyinkronkan ke VOC ML...';
+        syncAllBtn.textContent = '⏳ Sinkron...';
 
         try {
           const res = await fetch('/api/admin/sync-licenses', {
@@ -1634,9 +1769,9 @@
           if (res.ok) {
             const data = await res.json();
             updateDashboardState(data);
-            showToast(email ? `✅ Status lisensi ${email} berhasil diperbarui dari VOC ML!` : `✅ ${data.syncedCount || 0} akun berhasil disinkronkan dengan VOC ML!`);
+            showToast(email ? `✅ Status lisensi ${email} diperbarui dari VOC ML!` : `✅ ${data.syncedCount || 0} akun disinkronkan dengan VOC ML!`);
           }
-        } catch (err) {
+        } catch {
           showToast('⚠️ Gagal menyinkronkan lisensi ke VOC ML.');
         } finally {
           syncAllBtn.disabled = false;
@@ -1647,11 +1782,7 @@
       function showDashboard() {
         loginSection.classList.add('hidden');
         dashboardSection.classList.remove('hidden');
-        enablePushBtn.classList.remove('hidden');
-        testPushBtn.classList.remove('hidden');
         vocmlLinkBtn.classList.remove('hidden');
-        syncAllBtn.classList.remove('hidden');
-        refreshBtn.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         loadDashboard();
         checkAndSyncWebPushState();
@@ -1662,11 +1793,7 @@
       function showLogin() {
         clearInterval(refreshTimer);
         dashboardSection.classList.add('hidden');
-        enablePushBtn.classList.add('hidden');
-        testPushBtn.classList.add('hidden');
         vocmlLinkBtn.classList.add('hidden');
-        syncAllBtn.classList.add('hidden');
-        refreshBtn.classList.add('hidden');
         logoutBtn.classList.add('hidden');
         loginSection.classList.remove('hidden');
       }
@@ -1699,9 +1826,7 @@
       });
 
       syncAllBtn.addEventListener('click', () => syncLicensesWithVocml(null));
-      enablePushBtn.addEventListener('click', subscribeAdminWebPush);
       bannerEnablePushBtn.addEventListener('click', subscribeAdminWebPush);
-      testPushBtn.addEventListener('click', triggerTestWebPush);
       bannerTestPushBtn.addEventListener('click', triggerTestWebPush);
 
       if ('serviceWorker' in navigator) {
@@ -1741,7 +1866,7 @@
             }
             deferredAdminPwaPrompt = null;
           } else if (isIosDevice) {
-            alert('Untuk menginstall PWA Admin di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).\n3. Buka aplikasi dari Layar Utama lalu klik "Aktifkan Web Push Sekarang".');
+            alert('Untuk menginstall PWA Admin di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).\n3. Buka aplikasi dari Layar Utama lalu klik "Aktifkan Notifikasi HP".');
           }
         });
       }
@@ -1754,7 +1879,6 @@
       userSearchInput.addEventListener('input', renderUsersTable);
       logSearchInput.addEventListener('input', renderLogsTable);
 
-      // Filter pills untuk Tabel Pengguna
       document.getElementById('user-filter-pills').addEventListener('click', (e) => {
         const btn = e.target.closest('.filter-pill');
         if (!btn) return;
@@ -1764,7 +1888,6 @@
         renderUsersTable();
       });
 
-      // Filter pills untuk Tabel Log
       document.getElementById('log-filter-pills').addEventListener('click', (e) => {
         const btn = e.target.closest('.filter-pill');
         if (!btn) return;
@@ -1774,7 +1897,6 @@
         renderLogsTable();
       });
 
-      // Delegated actions pada Tabel Pengguna
       usersTableBody.addEventListener('click', async (e) => {
         const copyBtn = e.target.closest('.js-copy-machine');
         if (copyBtn) {
@@ -1811,7 +1933,6 @@
         }
       });
 
-      // Delegated actions pada Tabel Log Pesan
       logsTableBody.addEventListener('click', async (e) => {
         const destroyBtn = e.target.closest('.js-destroy-msg');
         if (!destroyBtn) return;
