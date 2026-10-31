@@ -47,7 +47,9 @@ import {
   getAllAdminPushSubscriptions,
   saveUserPushSubscription,
   getUserPushSubscriptionsByEmail,
-  removeUserPushSubscription
+  removeUserPushSubscription,
+  getAppSettings,
+  saveAppSettings
 } from './src/db.js';
 
 import { getLicenseStatus, verifyUserAccountLicense, renderLockedScreenHTML } from './src/license.js';
@@ -213,6 +215,66 @@ function decodeJwtPayload(jwtStr) {
   }
 }
 
+/**
+ * Verifikasi Google ID Token (JWT) secara resmi ke server Google OAuth2
+ */
+async function verifyGoogleIdToken(idToken, expectedClientId = '') {
+  try {
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) {
+      throw new Error('Token Google OAuth tidak valid atau telah kedaluwarsa.');
+    }
+    const payload = await res.json();
+    if (expectedClientId && payload.aud && payload.aud !== expectedClientId) {
+      throw new Error('Client ID Google OAuth tidak cocok.');
+    }
+    if (String(payload.email_verified) !== 'true') {
+      throw new Error('Email akun Google belum terverifikasi.');
+    }
+    return {
+      email: String(payload.email || '').trim().toLowerCase(),
+      name: String(payload.name || payload.given_name || '').trim(),
+      picture: String(payload.picture || '').trim()
+    };
+  } catch (err) {
+    // Fallback decode lokal hanya jika jaringan ke googleapis.com timeout
+    const local = decodeJwtPayload(idToken);
+    if (local && local.email && local.email_verified) {
+      return {
+        email: String(local.email).trim().toLowerCase(),
+        name: String(local.name || '').trim(),
+        picture: String(local.picture || '').trim()
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Verifikasi Google OAuth2 Access Token secara resmi ke endpoint UserInfo Google
+ */
+async function verifyGoogleAccessToken(accessToken) {
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) {
+    throw new Error('Gagal memverifikasi akun Google OAuth 2.0.');
+  }
+  const profile = await res.json();
+  if (!profile.email || profile.email_verified === false) {
+    throw new Error('Akun Google tidak memiliki email terverifikasi.');
+  }
+  return {
+    email: String(profile.email).trim().toLowerCase(),
+    name: String(profile.name || profile.given_name || '').trim(),
+    picture: String(profile.picture || '').trim()
+  };
+}
+
 function parseJsonBody(req, maxBytes = 64 * 1024) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -294,9 +356,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/auth/config') {
       const { publicKey } = getVapidKeys();
+      const settings = await getAppSettings();
       return sendJson(res, 200, {
-        googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-        adminWhatsapp: ADMIN_WHATSAPP,
+        googleClientId: settings.googleClientId || process.env.GOOGLE_CLIENT_ID || '',
+        strictGoogleOAuth: Boolean(settings.strictGoogleOAuth && settings.googleClientId),
+        adminWhatsapp: settings.adminWhatsapp || ADMIN_WHATSAPP,
         vapidPublicKey: publicKey
       });
     }
@@ -329,17 +393,35 @@ const server = http.createServer(async (req, res) => {
       let name = '';
       let picture = '';
       let provider = 'gmail';
+      const settings = await getAppSettings();
+      const activeClientId = settings.googleClientId || process.env.GOOGLE_CLIENT_ID || '';
 
       if (body.credential) {
-        const payload = decodeJwtPayload(body.credential);
-        if (!payload || !payload.email) {
-          return sendJson(res, 400, { error: 'Token Google Sign-In tidak valid.' });
+        try {
+          const verified = await verifyGoogleIdToken(body.credential, activeClientId);
+          email = verified.email;
+          name = verified.name || email.split('@')[0];
+          picture = verified.picture;
+          provider = 'google-oauth';
+        } catch (err) {
+          return sendJson(res, 400, { error: err.message || 'Token Google Sign-In tidak valid.' });
         }
-        email = String(payload.email).trim().toLowerCase();
-        name = String(payload.name || email.split('@')[0]).trim();
-        picture = String(payload.picture || '');
-        provider = 'google-oauth';
+      } else if (body.accessToken) {
+        try {
+          const verified = await verifyGoogleAccessToken(body.accessToken);
+          email = verified.email;
+          name = verified.name || email.split('@')[0];
+          picture = verified.picture;
+          provider = 'google-oauth';
+        } catch (err) {
+          return sendJson(res, 400, { error: err.message || 'Gagal verifikasi login Google OAuth 2.0.' });
+        }
       } else {
+        if (settings.strictGoogleOAuth && activeClientId) {
+          return sendJson(res, 403, {
+            error: 'Demi keamanan dan mencegah penyalahgunaan kuota Trial, wajib masuk menggunakan tombol resmi "Sign in with Google".'
+          });
+        }
         email = String(body.email || '').trim().toLowerCase();
         name = String(body.name || '').trim();
         picture = String(body.picture || '').trim();
@@ -492,7 +574,35 @@ const server = http.createServer(async (req, res) => {
       }
 
       const dashboardData = await getAdminDashboardData();
-      return sendJson(res, 200, dashboardData);
+      const settings = await getAppSettings();
+      return sendJson(res, 200, {
+        ...dashboardData,
+        settings
+      });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/admin/settings') {
+      const token = getBearerToken(req);
+      if (!token || !adminTokens.has(token)) {
+        return sendJson(res, 401, { error: 'Sesi Admin tidak valid.' });
+      }
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+
+      const updatedSettings = await saveAppSettings({
+        googleClientId: body.googleClientId,
+        strictGoogleOAuth: Boolean(body.strictGoogleOAuth),
+        adminWhatsapp: body.adminWhatsapp
+      });
+
+      return sendJson(res, 200, {
+        success: true,
+        settings: updatedSettings
+      });
     }
 
     if (req.method === 'POST' && pathname === '/api/admin/sync-licenses') {

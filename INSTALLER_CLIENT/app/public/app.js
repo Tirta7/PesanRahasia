@@ -16,6 +16,7 @@
   const vaultPill = document.getElementById('vault-pill');
   const userAvatar = document.getElementById('user-avatar');
   const userNameDisplay = document.getElementById('user-name-display');
+  const userVerifiedIcon = document.getElementById('user-verified-icon');
   const userEmailDisplay = document.getElementById('user-email-display');
   const userLicenseBadge = document.getElementById('user-license-badge');
   const logoutBtn = document.getElementById('logout-btn');
@@ -46,7 +47,9 @@
   const loginEmailInput = document.getElementById('login-email');
   const gmailLoginBtn = document.getElementById('gmail-login-btn');
   const googleOauthContainer = document.getElementById('google-oauth-container');
+  const btnGoogleOauthPopup = document.getElementById('btn-google-oauth-popup');
   const googleSigninBtn = document.getElementById('google-signin-btn');
+  const manualLoginDivider = document.getElementById('manual-login-divider');
 
   const createForm = document.getElementById('create-form');
   const secretInput = document.getElementById('secret-input');
@@ -352,6 +355,13 @@
     if (user && user.email) {
       userNameDisplay.textContent = user.name || user.email.split('@')[0];
       userEmailDisplay.textContent = user.email;
+      if (userVerifiedIcon) {
+        if (user.authProvider === 'google-oauth') {
+          userVerifiedIcon.classList.remove('hidden');
+        } else {
+          userVerifiedIcon.classList.add('hidden');
+        }
+      }
       userAvatar.src =
         user.picture ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email)}&background=10b981&color=04130d&bold=true`;
@@ -702,31 +712,80 @@
     }
   }
 
+  let googleTokenClient = null;
+
   async function loadPublicConfigAndGoogleOAuth() {
     try {
-      const res = await fetch('/api/auth/config');
+      const res = await fetch('/api/auth/config', { cache: 'no-store' });
       publicConfig = await res.json();
-      if (publicConfig.googleClientId && window.google && window.google.accounts) {
-        googleOauthContainer.classList.remove('hidden');
-        window.google.accounts.id.initialize({
-          client_id: publicConfig.googleClientId,
-          callback: async (response) => {
-            if (response.credential) {
-              await handleGoogleLoginRequest({ credential: response.credential });
-            }
-          }
-        });
-        window.google.accounts.id.renderButton(googleSigninBtn, {
-          theme: 'filled_black',
-          size: 'large',
-          shape: 'pill',
-          text: 'continue_with',
-          width: 320
-        });
+
+      if (publicConfig.strictGoogleOAuth && publicConfig.googleClientId) {
+        if (gmailLoginForm) gmailLoginForm.classList.add('hidden');
+        if (manualLoginDivider) manualLoginDivider.classList.add('hidden');
+      } else {
+        if (gmailLoginForm) gmailLoginForm.classList.remove('hidden');
+        if (manualLoginDivider) manualLoginDivider.classList.remove('hidden');
       }
+
+      const setupGoogleSdk = () => {
+        if (!publicConfig.googleClientId || !window.google || !window.google.accounts) return;
+
+        // 1. Google Identity Services (ID Token / One-Tap)
+        if (window.google.accounts.id) {
+          window.google.accounts.id.initialize({
+            client_id: publicConfig.googleClientId,
+            callback: async (response) => {
+              if (response.credential) {
+                await handleGoogleLoginRequest({ credential: response.credential });
+              }
+            }
+          });
+          if (googleSigninBtn) {
+            window.google.accounts.id.renderButton(googleSigninBtn, {
+              theme: 'filled_black',
+              size: 'large',
+              shape: 'pill',
+              text: 'continue_with',
+              width: 320
+            });
+          }
+        }
+
+        // 2. Google OAuth 2.0 Popup Client (1-Click Account Chooser + Foto Profil Asli)
+        if (window.google.accounts.oauth2) {
+          googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: publicConfig.googleClientId,
+            scope: 'openid email profile',
+            callback: async (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                await handleGoogleLoginRequest({ accessToken: tokenResponse.access_token });
+              }
+            }
+          });
+        }
+      };
+
+      setupGoogleSdk();
+      // Jika script GSI Google baru selesai dimuat sedikit belakangan
+      setTimeout(setupGoogleSdk, 1200);
     } catch {
-      // Gunakan form Gmail langsung jika Google Client ID belum diisi
+      // Gunakan form Gmail langsung jika gagal memuat config
     }
+  }
+
+  if (btnGoogleOauthPopup) {
+    btnGoogleOauthPopup.addEventListener('click', () => {
+      if (googleTokenClient) {
+        googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      }
+      if (publicConfig.googleClientId && window.google?.accounts?.id) {
+        window.google.accounts.id.prompt();
+        return;
+      }
+      showToast('ℹ️ Masukkan Google Client ID di /admin (Setelan Google OAuth) untuk mengaktifkan popup resmi Google, atau gunakan form Gmail di bawah.');
+      if (loginNameInput) loginNameInput.focus();
+    });
   }
 
   async function handleGoogleLoginRequest(payload) {

@@ -387,7 +387,7 @@
     /* Segmented Tabs */
     .main-tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       background: rgba(9, 13, 20, 0.85);
       border: 1px solid var(--border-subtle);
@@ -786,6 +786,10 @@
         gap: 10px;
       }
 
+      .main-tabs {
+        grid-template-columns: 1fr;
+      }
+
       .card {
         padding: 16px 14px;
         border-radius: 16px;
@@ -953,6 +957,9 @@
         <button type="button" class="main-tab-btn" id="tab-btn-logs">
           🕵️ Riwayat Link Pesan (<span id="tab-count-logs">0</span>)
         </button>
+        <button type="button" class="main-tab-btn" id="tab-btn-settings">
+          🔐 Google OAuth 2.0 & Setelan
+        </button>
       </div>
 
       <!-- PANEL TAB 1: DAFTAR PENGGUNA GMAIL (RESPONSIVE CARDS) -->
@@ -1009,6 +1016,68 @@
         <div id="logs-cards-list" class="cards-list">
           <div class="empty-state">Memuat riwayat aktivitas...</div>
         </div>
+      </section>
+
+      <!-- PANEL TAB 3: PENGATURAN GOOGLE OAUTH 2.0 RESMI & WHATSAPP ADMIN -->
+      <section id="panel-settings" class="card hidden">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h2>🔐 Login Google OAuth 2.0 Resmi ("Sign in with Google")</h2>
+            <p>Verifikasi email <strong>@gmail.com</strong> 100% asli milik pengguna beserta foto profil Google resmi untuk mencegah manipulasi kuota Trial.</p>
+          </div>
+          <span id="oauth-config-badge" class="badge badge-pending">⏳ Client ID Belum Diisi</span>
+        </div>
+
+        <form id="oauth-settings-form">
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:6px; color:#e5e7eb;">
+              Google OAuth 2.0 Client ID (Web Application)
+            </label>
+            <input
+              type="text"
+              id="setting-google-client-id"
+              class="form-input mono"
+              placeholder="Contoh: 1234567890-abcdefg.apps.googleusercontent.com"
+              style="margin-bottom:6px; font-size:0.82rem;"
+            />
+            <small style="color:var(--text-muted); font-size:0.75rem; display:block;">
+              Buat gratis di <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:#6ee7b7;">Google Cloud Console → Credentials</a>, pilih <strong>OAuth Client ID (Web application)</strong>, dan tambahkan Authorized JavaScript Origin: <code style="color:#fcd34d;">https://privatmassage.vocpos.id</code> serta <code style="color:#fcd34d;">http://localhost:3006</code>.
+            </small>
+          </div>
+
+          <div class="meta-box" style="margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div>
+              <div style="font-size:0.85rem; font-weight:700; color:#fff;">🛡️ Wajibkan Login Google OAuth Resmi (Blokir Input Email Manual)</div>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                Jika diaktifkan, form ketik nama & email manual disembunyikan sehingga pengguna wajib klik tombol <strong>Sign in with Google</strong>.
+              </div>
+            </div>
+            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.82rem; color:#6ee7b7;">
+              <input type="checkbox" id="setting-strict-oauth" style="width:18px; height:18px; accent-color:#10b981;" />
+              <span>Wajib OAuth Resmi</span>
+            </label>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:6px; color:#e5e7eb;">
+              💬 Nomor WhatsApp Admin (Untuk Tombol Aktivasi Lisensi Pro)
+            </label>
+            <input
+              type="text"
+              id="setting-admin-whatsapp"
+              class="form-input mono"
+              placeholder="Contoh: 6281234567890"
+              style="margin-bottom:4px; font-size:0.84rem;"
+            />
+            <small style="color:var(--text-muted); font-size:0.75rem; display:block;">
+              Nomor tujuan saat pengguna menekan tombol "Kirim ID Lisensi ke WhatsApp Admin" ketika kuota Trial 10x mereka habis.
+            </small>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">
+            💾 Simpan Pengaturan Keamanan & Google OAuth
+          </button>
+        </form>
       </section>
     </main>
   </div>
@@ -1092,8 +1161,15 @@
 
       const tabBtnUsers = document.getElementById('tab-btn-users');
       const tabBtnLogs = document.getElementById('tab-btn-logs');
+      const tabBtnSettings = document.getElementById('tab-btn-settings');
       const panelUsers = document.getElementById('panel-users');
       const panelLogs = document.getElementById('panel-logs');
+      const panelSettings = document.getElementById('panel-settings');
+      const oauthSettingsForm = document.getElementById('oauth-settings-form');
+      const settingGoogleClientId = document.getElementById('setting-google-client-id');
+      const settingStrictOauth = document.getElementById('setting-strict-oauth');
+      const settingAdminWhatsapp = document.getElementById('setting-admin-whatsapp');
+      const oauthConfigBadge = document.getElementById('oauth-config-badge');
       const tabCountUsers = document.getElementById('tab-count-users');
       const tabCountLogs = document.getElementById('tab-count-logs');
 
@@ -1142,19 +1218,24 @@
         else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
       }
 
-      tabBtnUsers.addEventListener('click', () => {
-        tabBtnUsers.classList.add('active');
-        tabBtnLogs.classList.remove('active');
-        panelUsers.classList.remove('hidden');
-        panelLogs.classList.add('hidden');
-      });
+      function switchMainTab(activeTab) {
+        [tabBtnUsers, tabBtnLogs, tabBtnSettings].forEach((b) => b && b.classList.remove('active'));
+        [panelUsers, panelLogs, panelSettings].forEach((p) => p && p.classList.add('hidden'));
+        if (activeTab === 'users') {
+          tabBtnUsers.classList.add('active');
+          panelUsers.classList.remove('hidden');
+        } else if (activeTab === 'logs') {
+          tabBtnLogs.classList.add('active');
+          panelLogs.classList.remove('hidden');
+        } else if (activeTab === 'settings') {
+          tabBtnSettings.classList.add('active');
+          panelSettings.classList.remove('hidden');
+        }
+      }
 
-      tabBtnLogs.addEventListener('click', () => {
-        tabBtnLogs.classList.add('active');
-        tabBtnUsers.classList.remove('active');
-        panelLogs.classList.remove('hidden');
-        panelUsers.classList.add('hidden');
-      });
+      tabBtnUsers.addEventListener('click', () => switchMainTab('users'));
+      tabBtnLogs.addEventListener('click', () => switchMainTab('logs'));
+      if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => switchMainTab('settings'));
 
       function playNotificationChime() {
         try {
@@ -1385,14 +1466,20 @@
             const destroyedCount = userLogs.filter((l) => l.status === 'destroyed').length;
             const machineId = u.machineId || '-';
             const licInfo = getLicenseStatusObj(u);
+            const authBadge = u.authProvider === 'google-oauth'
+              ? '<span class="badge badge-active" style="font-size:0.65rem; padding:2px 7px;">✓ Google OAuth Resmi</span>'
+              : '<span class="badge badge-expired" style="font-size:0.65rem; padding:2px 7px;">📝 Input Gmail</span>';
 
             return `
               <div class="item-card">
                 <div class="item-card-top">
                   <div class="user-identity">
-                    <img src="${avatar}" class="avatar-sm" alt="" />
+                    <img src="${avatar}" class="avatar-sm" alt="" referrerpolicy="no-referrer" />
                     <div>
-                      <span class="user-name">${u.name || '-'}</span>
+                      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span class="user-name">${u.name || '-'}</span>
+                        ${authBadge}
+                      </div>
                       <span class="user-email">${u.email}</span>
                     </div>
                   </div>
@@ -1621,8 +1708,53 @@
         allLogs = data.logs || [];
         tabCountUsers.textContent = allUsers.length;
         tabCountLogs.textContent = allLogs.length;
+
+        if (data.settings && document.activeElement !== settingGoogleClientId && document.activeElement !== settingAdminWhatsapp) {
+          settingGoogleClientId.value = data.settings.googleClientId || '';
+          settingStrictOauth.checked = Boolean(data.settings.strictGoogleOAuth);
+          settingAdminWhatsapp.value = data.settings.adminWhatsapp || '';
+          if (data.settings.googleClientId) {
+            oauthConfigBadge.className = 'badge badge-active';
+            oauthConfigBadge.textContent = data.settings.strictGoogleOAuth ? '✓ OAuth Resmi Aktif (Ketat)' : '✓ OAuth Resmi Aktif';
+          } else {
+            oauthConfigBadge.className = 'badge badge-pending';
+            oauthConfigBadge.textContent = '⏳ Client ID Belum Diisi';
+          }
+        }
+
         renderUsersList();
         renderLogsList();
+      }
+
+      if (oauthSettingsForm) {
+        oauthSettingsForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const token = getAdminToken();
+          if (!token) return;
+          try {
+            const res = await fetch('/api/admin/settings', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                googleClientId: settingGoogleClientId.value.trim(),
+                strictGoogleOAuth: settingStrictOauth.checked,
+                adminWhatsapp: settingAdminWhatsapp.value.trim()
+              })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              showToast('✅ Pengaturan Google OAuth 2.0 & WhatsApp berhasil disimpan!');
+              loadDashboard();
+            } else {
+              showToast('❌ ' + (data.error || 'Gagal menyimpan pengaturan.'));
+            }
+          } catch {
+            showToast('⚠️ Gagal menghubungi server.');
+          }
+        });
       }
 
       async function syncLicensesWithVocml(email = null) {

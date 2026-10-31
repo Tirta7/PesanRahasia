@@ -15,6 +15,7 @@ const memorySessions = new Map();
 const memoryLogs = new Map();
 const memoryPushSubscriptions = new Map();
 const memoryUserPushSubscriptions = new Map();
+const memorySettings = new Map();
 
 let pool = null;
 let isPostgresReady = false;
@@ -159,6 +160,12 @@ export async function initDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_user_push_email ON user_push_subscriptions(user_email);
+
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key VARCHAR(64) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `).catch(() => {});
 
     isPostgresReady = true;
@@ -191,10 +198,11 @@ export async function loginOrRegisterGmailUser({ email, name, picture = '', ip =
        ON CONFLICT (email) DO UPDATE SET
          name = COALESCE(NULLIF(EXCLUDED.name, ''), users.name),
          picture = COALESCE(NULLIF(EXCLUDED.picture, ''), users.picture),
+         auth_provider = CASE WHEN EXCLUDED.auth_provider = 'google-oauth' THEN 'google-oauth' ELSE users.auth_provider END,
          last_ip = EXCLUDED.last_ip,
          user_agent = EXCLUDED.user_agent,
          last_login_at = NOW()
-       RETURNING id, email, name, picture, messages_created AS "messagesCreated", created_at AS "createdAt", last_login_at AS "lastLoginAt"`,
+       RETURNING id, email, name, picture, auth_provider AS "authProvider", messages_created AS "messagesCreated", created_at AS "createdAt", last_login_at AS "lastLoginAt"`,
       [cleanEmail, cleanName, picture, provider, ip, userAgent]
     );
     const user = userRes.rows[0];
@@ -239,7 +247,7 @@ export async function getUserBySessionToken(token) {
 
   if (isPostgresReady && pool) {
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.picture, u.messages_created AS "messagesCreated", u.created_at AS "createdAt", u.last_login_at AS "lastLoginAt"
+      `SELECT u.id, u.email, u.name, u.picture, u.auth_provider AS "authProvider", u.messages_created AS "messagesCreated", u.created_at AS "createdAt", u.last_login_at AS "lastLoginAt"
        FROM user_sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -878,3 +886,73 @@ export async function removeUserPushSubscription(endpoint) {
   }
   memoryUserPushSubscriptions.delete(endpoint);
 }
+
+// ============================================================================
+// PENGATURAN APLIKASI & GOOGLE OAUTH 2.0 (DISIMPAN DI POSTGRESQL)
+// ============================================================================
+
+export async function getAppSettings() {
+  const defaults = {
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    strictGoogleOAuth: process.env.STRICT_GOOGLE_OAUTH === 'true' ? 'true' : 'false',
+    adminWhatsapp: (process.env.ADMIN_WHATSAPP || '').replace(/[^0-9]/g, '')
+  };
+
+  if (isPostgresReady && pool) {
+    try {
+      const res = await pool.query('SELECT key, value FROM app_settings');
+      for (const row of res.rows) {
+        if (row.key in defaults && row.value !== undefined) {
+          defaults[row.key] = row.value;
+        }
+      }
+    } catch {
+      // Gunakan defaults jika gagal query
+    }
+    return {
+      googleClientId: String(defaults.googleClientId || '').trim(),
+      strictGoogleOAuth: defaults.strictGoogleOAuth === 'true',
+      adminWhatsapp: String(defaults.adminWhatsapp || '').replace(/[^0-9]/g, '')
+    };
+  }
+
+  for (const [k, v] of memorySettings.entries()) {
+    defaults[k] = v;
+  }
+  return {
+    googleClientId: String(defaults.googleClientId || '').trim(),
+    strictGoogleOAuth: defaults.strictGoogleOAuth === 'true',
+    adminWhatsapp: String(defaults.adminWhatsapp || '').replace(/[^0-9]/g, '')
+  };
+}
+
+export async function saveAppSettings({ googleClientId, strictGoogleOAuth, adminWhatsapp }) {
+  const entries = [];
+  if (googleClientId !== undefined) {
+    entries.push(['googleClientId', String(googleClientId).trim()]);
+  }
+  if (strictGoogleOAuth !== undefined) {
+    entries.push(['strictGoogleOAuth', strictGoogleOAuth ? 'true' : 'false']);
+  }
+  if (adminWhatsapp !== undefined) {
+    entries.push(['adminWhatsapp', String(adminWhatsapp).replace(/[^0-9]/g, '')]);
+  }
+
+  if (isPostgresReady && pool) {
+    for (const [k, v] of entries) {
+      await pool.query(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [k, v]
+      );
+    }
+  } else {
+    for (const [k, v] of entries) {
+      memorySettings.set(k, v);
+    }
+  }
+
+  return getAppSettings();
+}
+
