@@ -533,50 +533,5 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="/app.js"></script>
-  <script>
-    (() => {
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch(() => {});
-        });
-      }
-
-      let deferredPrompt = null;
-      const installBtn = document.getElementById('pwa-install-btn');
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-      if (!isStandalone && isIos && installBtn) {
-        installBtn.classList.remove('hidden');
-      }
-
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        if (!isStandalone && installBtn) {
-          installBtn.classList.remove('hidden');
-        }
-      });
-
-      if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            if (choice.outcome === 'accepted') {
-              installBtn.classList.add('hidden');
-            }
-            deferredPrompt = null;
-          } else if (isIos) {
-            alert('Untuk menginstall aplikasi di iPhone/iPad:\n1. Ketuk ikon Share (Bagikan) di bawah browser Safari.\n2. Pilih "Add to Home Screen" (Tambahkan ke Layar Utama).');
-          }
-        });
-      }
-
-      window.addEventListener('appinstalled', () => {
-        if (installBtn) installBtn.classList.add('hidden');
-      });
-    })();
-  </script>
 </body>
 </html>
