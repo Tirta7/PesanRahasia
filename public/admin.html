@@ -967,7 +967,7 @@
         <div class="section-header">
           <div class="section-title-group">
             <h2>📋 Daftar Pengguna Gmail & Lisensi Akun</h2>
-            <p>Setiap akun baru mendapat <strong>Trial 10x Pesan Gratis</strong> sebelum wajib aktivasi di <strong>vocml.vocpos.id</strong>.</p>
+            <p>Setiap akun baru mendapat kuota <strong>Trial Pesan Gratis</strong> sebelum wajib aktivasi di <strong>vocml.vocpos.id</strong>.</p>
           </div>
           <button id="export-csv-btn" class="btn btn-primary btn-sm">
             📥 Export CSV
@@ -978,7 +978,7 @@
           <div class="filter-pills" id="user-filter-pills">
             <button type="button" class="filter-pill active" data-filter="all">Semua Pengguna</button>
             <button type="button" class="filter-pill" data-filter="active">✅ Lisensi Pro</button>
-            <button type="button" class="filter-pill" data-filter="pending">🎁 Trial Gratis (10x)</button>
+            <button type="button" class="filter-pill" data-filter="pending">🎁 Akun Trial Gratis</button>
             <button type="button" class="filter-pill" data-filter="expired">🛑 Trial Habis / Terkunci</button>
           </div>
 
@@ -1403,8 +1403,9 @@
 
       function getLicenseStatusObj(u) {
         const st = u.licenseStatus || 'pending';
+        const quota = u.trialLimit || 3;
         const used = Number(u.messagesCreated) || 0;
-        const rem = Math.max(0, 10 - used);
+        const rem = Math.max(0, quota - used);
 
         if (st === 'active' || st === 'expiring') {
           return {
@@ -1424,14 +1425,14 @@
             sub: 'Perlu dibuka di VOC ML'
           };
         }
-        if (used >= 10 || st === 'trial_exhausted') {
+        if (used >= quota || st === 'trial_exhausted' || rem <= 0) {
           return {
-            badge: '<span class="badge badge-destroyed">🛑 Trial Habis (10/10)</span>',
+            badge: `<span class="badge badge-destroyed">🛑 Trial Habis (${used}/${quota})</span>`,
             sub: 'Wajib aktivasi berbayar'
           };
         }
         return {
-          badge: `<span class="badge badge-pending">🎁 Trial Gratis (${used}/10)</span>`,
+          badge: `<span class="badge badge-pending">🎁 Trial Gratis (${used}/${quota})</span>`,
           sub: `Sisa ${rem} pesan gratis`
         };
       }

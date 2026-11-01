@@ -381,7 +381,8 @@
 
       if (userLicenseBadge) {
         if (currentLicense && currentLicense.isTrial) {
-          userLicenseBadge.textContent = `🎁 Trial (${currentLicense.trialRemaining}/${currentLicense.trialLimit || 10})`;
+          const quota = currentLicense.trialLimit || 3;
+          userLicenseBadge.textContent = `🎁 Trial (${currentLicense.trialRemaining}/${quota})`;
           userLicenseBadge.className = 'user-license-badge badge-trial';
           userLicenseBadge.classList.remove('hidden');
         } else if (currentLicense && currentLicense.allowed) {
@@ -400,7 +401,7 @@
 
       if (trialQuotaBanner) {
         if (currentLicense && currentLicense.isTrial) {
-          const limit = currentLicense.trialLimit || 10;
+          const limit = currentLicense.trialLimit || 3;
           const rem = currentLicense.trialRemaining ?? limit;
           const pct = Math.max(8, Math.round((rem / limit) * 100));
           trialBannerTitle.textContent = `Kuota Trial Gratis: Sisa ${rem} dari ${limit} Pesan`;

@@ -36,7 +36,7 @@ export const VOCML_SERVER_URL = (process.env.VOCML_SERVER_URL || 'https://vocml.
 export const VOCML_PRODUCT = process.env.VOCML_PRODUCT || 'messagerahasia';
 
 const VOCML_PUBLIC_KEY = process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY;
-export const FREE_TRIAL_LIMIT = Number(process.env.FREE_TRIAL_LIMIT) || 10;
+export const FREE_TRIAL_LIMIT = Number(process.env.FREE_TRIAL_LIMIT) || 3;
 
 // Cache per akun Gmail agar tahan jika koneksi internet ke vocml.vocpos.id sempat terputus (TTL: 60 detik)
 const userLicenseCache = new Map();
@@ -115,11 +115,11 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
 
     // Deteksi kuota trial langsung dari server VOC ML
     const vocmlTrial = body.trial || payload.trial || null;
-    const serverTrialQuota = vocmlTrial?.quota != null ? Number(vocmlTrial.quota) : FREE_TRIAL_LIMIT;
+    const configuredLimit = Number(process.env.FREE_TRIAL_LIMIT) || 3;
+    const rawServerQuota = vocmlTrial?.quota != null ? Number(vocmlTrial.quota) : configuredLimit;
+    const serverTrialQuota = Math.min(rawServerQuota, configuredLimit);
     const serverTrialUsed = vocmlTrial?.used != null ? Number(vocmlTrial.used) : trialUsed;
-    const serverTrialRemaining = vocmlTrial?.remaining != null
-      ? Number(vocmlTrial.remaining)
-      : Math.max(0, serverTrialQuota - serverTrialUsed);
+    const serverTrialRemaining = Math.max(0, serverTrialQuota - serverTrialUsed);
 
     let allowed = false;
     let isTrial = false;
