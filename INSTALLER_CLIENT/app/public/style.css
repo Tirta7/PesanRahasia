@@ -1326,55 +1326,80 @@ input[type="password"]:focus {
 }
 
 .lic-qris-box {
-  background: #ffffff;
-  color: #111827;
-  border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 18px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 20px;
   text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(16, 185, 129, 0.12);
+  transition: all 0.2s ease;
 }
 
 .qris-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .qris-badge {
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
   font-size: 0.72rem;
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
+  letter-spacing: 0.4px;
 }
 
 .qris-amount {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 900;
-  color: #111827;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  text-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
 }
 
 .qris-merchant {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: #374151;
-  margin-bottom: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 14px;
+  letter-spacing: 0.2px;
+}
+
+.qris-img-wrap {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  margin: 6px auto 14px;
+  border: 3px solid rgba(255, 255, 255, 0.9);
 }
 
 .qris-img-wrap img {
-  max-width: 220px;
+  max-width: 210px;
   width: 100%;
   height: auto;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  display: block;
+  border-radius: 6px;
 }
 
 .qris-note {
   font-size: 0.78rem;
-  color: #4b5563;
-  margin-top: 8px;
+  color: #94a3b8;
+  line-height: 1.45;
+  margin-top: 10px;
 }
 
 .lic-polling-bar {
@@ -1663,31 +1688,32 @@ input[type="password"]:focus {
 
 /* Banner Promo di atas QRIS */
 .qris-promo-banner {
-  margin-bottom: 14px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(245, 158, 11, 0.15));
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  border-radius: 10px;
+  margin-bottom: 16px;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(245, 158, 11, 0.18));
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 12px;
   text-align: left;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.12);
 }
 
 .qris-promo-content {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.8rem;
-  color: #fef3c7;
+  gap: 12px;
+  font-size: 0.84rem;
+  color: #ffffff;
 }
 
 .qris-promo-fire {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   line-height: 1;
 }
 
 .qris-promo-sub {
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   color: #fde68a;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* Voucher Promo Box */
