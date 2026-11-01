@@ -947,9 +947,18 @@
     licQrisBox.classList.remove('hidden');
 
     if (planExpiryInfo) {
+      const days = Number(plan.days) || 1;
       if (plan.isPromo) {
         const hematNominal = plan.originalPrice > plan.price ? plan.originalPrice - plan.price : 0;
         planExpiryInfo.innerHTML = `🔥 <strong>Promo Aktif:</strong> Paket ${plan.label} ${plan.promoBadge ? `(${plan.promoBadge})` : ''} • Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong>${hematNominal > 0 ? ` (Hemat ${formatRupiah(hematNominal)})` : ''} • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      } else if (days === 14) {
+        planExpiryInfo.innerHTML = `⚡ <strong>Paket Fleksibel 14 Hari:</strong> Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong> • Bebas kirim 2 minggu penuh • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      } else if (days === 30 || plan.popular) {
+        planExpiryInfo.innerHTML = `⭐ <strong>Paket Terlaris 30 Hari:</strong> Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong> • Paling banyak dipilih • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      } else if (days === 90) {
+        planExpiryInfo.innerHTML = `💎 <strong>Paket Smart 90 Hari:</strong> Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong> • Hemat & praktis 1 kuartal • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      } else if (days >= 360) {
+        planExpiryInfo.innerHTML = `👑 <strong>Paket VIP 1 Tahun:</strong> Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong> (Tarif Paling Murah) • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
       } else {
         planExpiryInfo.innerHTML = `✨ Paket ${plan.label} • ${formatRupiah(plan.perDay)}/hari • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
       }
@@ -969,6 +978,67 @@
         ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
         : `https://wa.me/?text=${encodeURIComponent(waText)}`;
     }
+  }
+
+  function getPlanMarketingDetails(p) {
+    const days = Number(p.days) || 1;
+    const orig = Number(p.originalPrice || p.original_price || p.basePrice || 0);
+    const price = Number(p.price || p.amount || 0);
+    const isPromo = Boolean(p.isPromo || p.is_promo || (orig > 0 && orig > price) || p.promoBadge || p.promo_badge);
+    const promoBadge = p.promoBadge || p.promo_badge || (isPromo && orig > price ? `DISKON ${Math.round((1 - price / orig) * 100)}%` : '');
+
+    let badgeHtml = '';
+    let tagHtml = '';
+    let subText = `${formatRupiah(p.perDay)}/hari`;
+    let metaText = `+${days} Hari Pro Unlimited`;
+    let cardClass = '';
+
+    if (isPromo) {
+      badgeHtml = `<span class="plan-badge promo">🔥 ${promoBadge || 'DISKON'}</span>`;
+      tagHtml = `<span class="plan-tag-promo">Diskon</span>`;
+      cardClass = 'has-promo';
+      if (orig > price) {
+        subText = `${formatRupiah(p.perDay)}/hari • <span class="plan-hemat-text">Hemat ${formatRupiah(orig - price)}</span>`;
+      }
+      metaText = `🛡️ Akses ${days} Hari • Fitur Lengkap`;
+    } else if (days === 14) {
+      badgeHtml = `<span class="plan-badge save">⚡ FLEKSIBEL</span>`;
+      tagHtml = `<span class="plan-tag-flex">2 Minggu</span>`;
+      cardClass = 'is-flex';
+      subText = `${formatRupiah(p.perDay)}/hari • Bebas kirim 2 minggu`;
+      metaText = `🛡️ Enkripsi AES-256 & Anti-Intip`;
+    } else if (days === 30 || p.popular) {
+      badgeHtml = `<span class="plan-badge popular">⭐ TERLARIS</span>`;
+      tagHtml = `<span class="plan-tag-popular">Paling Favorit</span>`;
+      cardClass = 'is-popular';
+      subText = `${formatRupiah(p.perDay)}/hari • Pilihan utama pengguna`;
+      metaText = `🚀 Akses 1 Bulan + Prioritas`;
+    } else if (days === 90) {
+      badgeHtml = `<span class="plan-badge smart">💎 LEBIH HEMAT</span>`;
+      tagHtml = `<span class="plan-tag-smart">3 Bulan</span>`;
+      cardClass = 'is-smart';
+      subText = `${formatRupiah(p.perDay)}/hari • Praktis per kuartal`;
+      metaText = `💎 Bebas Kirim 3 Bulan Penuh`;
+    } else if (days >= 360) {
+      badgeHtml = `<span class="plan-badge vip">👑 HARGA TERBAIK</span>`;
+      tagHtml = `<span class="plan-tag-vip">Termurah/Hari</span>`;
+      cardClass = 'is-vip';
+      subText = `<strong style="color:#38bdf8;">${formatRupiah(p.perDay)}/hari</strong> • Tarif harian termurah`;
+      metaText = `👑 Akses 1 Tahun + Support VIP`;
+    } else if (p.savePct >= 10) {
+      badgeHtml = `<span class="plan-badge save">HEMAT ${p.savePct}%</span>`;
+      tagHtml = `<span class="plan-tag-promo">Hemat</span>`;
+      cardClass = 'has-promo';
+      subText = `${formatRupiah(p.perDay)}/hari • Hemat ${p.savePct}%`;
+    }
+
+    return {
+      badgeHtml,
+      tagHtml,
+      subText,
+      metaText,
+      cardClass
+    };
   }
 
   function renderPlanPicker(user, license) {
@@ -993,15 +1063,7 @@
 
     const cards = plans
       .map((p) => {
-        const badges = [];
-        if (p.isPromo || p.promoBadge) {
-          badges.push(`<span class="plan-badge promo">🔥 ${p.promoBadge || 'DISKON'}</span>`);
-        } else if (p.popular) {
-          badges.push('<span class="plan-badge">POPULER</span>');
-        } else if (p.savePct >= 10) {
-          badges.push(`<span class="plan-badge save">HEMAT ${p.savePct}%</span>`);
-        }
-
+        const mkt = getPlanMarketingDetails(p);
         const priceHtml = (p.isPromo && p.originalPrice > p.price)
           ? `<div class="plan-price-row">
               <span class="plan-card-price">${formatRupiah(p.price)}</span>
@@ -1009,24 +1071,16 @@
              </div>`
           : `<span class="plan-card-price">${formatRupiah(p.price)}</span>`;
 
-        let subDetail = `${formatRupiah(p.perDay)}/hari`;
-        if (p.isPromo && p.originalPrice > p.price) {
-          const hematNominal = p.originalPrice - p.price;
-          subDetail += ` • <span class="plan-hemat-text">Hemat ${formatRupiah(hematNominal)}</span>`;
-        } else if (p.popular && p.savePct >= 10) {
-          subDetail += ` • hemat ${p.savePct}%`;
-        }
-
         return `
-          <button type="button" class="plan-card ${p.isPromo ? 'has-promo' : ''}" data-plan="${p.key}">
-            ${badges.join('')}
+          <button type="button" class="plan-card ${mkt.cardClass}" data-plan="${p.key}">
+            ${mkt.badgeHtml}
             <div class="plan-card-top">
               <span class="plan-card-label">${p.label}</span>
-              ${p.isPromo ? `<span class="plan-tag-promo">Diskon</span>` : ''}
+              ${mkt.tagHtml}
             </div>
             ${priceHtml}
-            <span class="plan-card-sub">${subDetail}</span>
-            <span class="plan-card-meta">+${p.days} Hari Pro Unlimited</span>
+            <span class="plan-card-sub">${mkt.subText}</span>
+            <span class="plan-card-meta">${mkt.metaText}</span>
           </button>`;
       })
       .join('');

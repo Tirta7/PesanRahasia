@@ -1551,6 +1551,97 @@ input[type="password"]:focus {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.plan-badge.popular {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.plan-badge.smart {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.plan-badge.vip {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.plan-tag-popular {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.plan-tag-smart {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.plan-tag-vip {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.plan-tag-flex {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.plan-card.is-popular {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.plan-card.is-popular:hover {
+  border-color: #10b981;
+}
+
+.plan-card.is-smart {
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+.plan-card.is-smart:hover {
+  border-color: #8b5cf6;
+}
+
+.plan-card.is-vip {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.plan-card.is-vip:hover {
+  border-color: #0ea5e9;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
 .plan-card-business {
   grid-column: 1 / -1;
   flex-direction: row;
