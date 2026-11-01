@@ -531,9 +531,13 @@ const server = http.createServer(async (req, res) => {
         packages = LICENSE_PLANS.map((p) => ({
           key: p.key,
           label: p.label,
+          name: p.name || `Paket ${p.label}`,
           days: p.days,
           amount: p.price,
           amount_text: formatRupiah(p.price),
+          original_price: p.originalPrice || 0,
+          is_promo: Boolean(p.isPromo),
+          promo_badge: p.promoBadge || '',
           popular: p.popular,
           per_day: p.perDay,
           save_pct: p.savePct,

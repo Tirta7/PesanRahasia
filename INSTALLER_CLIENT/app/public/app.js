@@ -481,16 +481,29 @@
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data && data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
-            publicConfig.plans = data.packages.map((p) => ({
-              key: p.key || String(p.days) + 'd',
-              label: p.label || `${p.days} Hari`,
-              days: p.days,
-              price: p.amount,
-              popular: Boolean(p.popular),
-              perDay: p.per_day || Math.round(p.amount / p.days),
-              savePct: p.save_pct || 0,
-              qrisImageUrl: p.qris_image_url
-            }));
+            publicConfig.plans = data.packages.map((p) => {
+              const orig = Number(p.original_price || p.basePrice || 0);
+              const pr = Number(p.amount || p.price || 0);
+              const isPromo = Boolean(p.is_promo || p.isPromo || (orig > 0 && orig > pr) || p.promo_badge || p.promoBadge);
+              let badge = p.promo_badge || p.promoBadge || '';
+              if (!badge && isPromo && orig > pr) {
+                badge = `DISKON ${Math.round((1 - pr / orig) * 100)}%`;
+              }
+              return {
+                key: p.key || p.id || String(p.days) + 'd',
+                name: p.name || `Paket ${p.label || `${p.days} Hari`}`,
+                label: p.label || `${p.days} Hari`,
+                days: Number(p.days) || 1,
+                price: pr,
+                originalPrice: orig > pr ? orig : (isPromo ? orig : 0),
+                isPromo,
+                promoBadge: badge,
+                popular: Boolean(p.popular),
+                perDay: p.per_day || Math.round(pr / (Number(p.days) || 1)),
+                savePct: p.save_pct || (orig > pr ? Math.round((1 - pr / orig) * 100) : 0),
+                qrisImageUrl: p.qris_image_url
+              };
+            });
             renderPlanPicker(user, license);
           }
         })
@@ -907,11 +920,39 @@
     qrisMerchant.textContent =
       [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ') || 'VIRTUAL OPERATION CONTROL • SIDOARJO';
     qrisImg.src = plan.qrisImageUrl || buildQrisImageUrl(license, plan.price);
+
+    // Tampilkan promo banner di atas QRIS jika paket memiliki promo
+    const qrisPromoBanner = document.getElementById('qris-promo-banner');
+    if (qrisPromoBanner) {
+      if (plan.isPromo && (plan.promoBadge || (plan.originalPrice && plan.originalPrice > plan.price))) {
+        const hematNominal = plan.originalPrice > plan.price ? plan.originalPrice - plan.price : 0;
+        qrisPromoBanner.innerHTML = `
+          <div class="qris-promo-content">
+            <span class="qris-promo-fire">🔥</span>
+            <div>
+              <strong>Promo Spesial Diterapkan: ${plan.promoBadge || 'Diskon'}</strong>
+              <div class="qris-promo-sub">
+                Cukup bayar <strong>${formatRupiah(plan.price)}</strong>
+                ${hematNominal > 0 ? ` (Normal: <del>${formatRupiah(plan.originalPrice)}</del> • Hemat <strong>${formatRupiah(hematNominal)}</strong>)` : ''}
+              </div>
+            </div>
+          </div>`;
+        qrisPromoBanner.classList.remove('hidden');
+      } else {
+        qrisPromoBanner.classList.add('hidden');
+      }
+    }
+
     qrisNote.textContent = `Scan QRIS untuk membayar paket ${plan.label} (${formatRupiah(plan.price)}). Masa aktif bertambah ${plan.label} setelah pembayaran terverifikasi.`;
     licQrisBox.classList.remove('hidden');
 
     if (planExpiryInfo) {
-      planExpiryInfo.textContent = `Paket ${plan.label} • ${formatRupiah(plan.perDay)}/hari • Estimasi masa aktif baru s/d ${estimateNewExpiry(license, plan)}`;
+      if (plan.isPromo) {
+        const hematNominal = plan.originalPrice > plan.price ? plan.originalPrice - plan.price : 0;
+        planExpiryInfo.innerHTML = `🔥 <strong>Promo Aktif:</strong> Paket ${plan.label} ${plan.promoBadge ? `(${plan.promoBadge})` : ''} • Cuma <strong>${formatRupiah(plan.perDay)}/hari</strong>${hematNominal > 0 ? ` (Hemat ${formatRupiah(hematNominal)})` : ''} • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      } else {
+        planExpiryInfo.innerHTML = `✨ Paket ${plan.label} • ${formatRupiah(plan.perDay)}/hari • Estimasi masa aktif baru s/d <strong>${estimateNewExpiry(license, plan)}</strong>`;
+      }
     }
 
     if (waAdminActivateBtn && user) {
@@ -921,7 +962,7 @@
         `• Nama: *${user.name}*\n` +
         `• Email Gmail: *${user.email}*\n` +
         `• ID Lisensi (VOC ML): *${license.machineId || '-'}*\n` +
-        `• Paket: *${plan.label} (${formatRupiah(plan.price)})*\n\n` +
+        `• Paket: *${plan.label} (${formatRupiah(plan.price)}${plan.isPromo && plan.originalPrice > plan.price ? ` - Promo ${plan.promoBadge || 'Diskon'}, Normal ${formatRupiah(plan.originalPrice)}` : ''})*\n\n` +
         `Mohon bantuannya untuk aktivasi. Terima kasih!`;
       const phone = publicConfig.adminWhatsapp || '';
       waAdminActivateBtn.href = phone
@@ -947,20 +988,45 @@
     }
 
     if (!plans.some((p) => p.key === selectedPlanKey)) {
-      selectedPlanKey = (plans.find((p) => p.popular) || plans[0]).key;
+      selectedPlanKey = (plans.find((p) => p.isPromo) || plans.find((p) => p.popular) || plans[0]).key;
     }
 
     const cards = plans
       .map((p) => {
         const badges = [];
-        if (p.popular) badges.push('<span class="plan-badge">POPULER</span>');
-        else if (p.savePct >= 10) badges.push(`<span class="plan-badge save">HEMAT ${p.savePct}%</span>`);
+        if (p.isPromo || p.promoBadge) {
+          badges.push(`<span class="plan-badge promo">🔥 ${p.promoBadge || 'DISKON'}</span>`);
+        } else if (p.popular) {
+          badges.push('<span class="plan-badge">POPULER</span>');
+        } else if (p.savePct >= 10) {
+          badges.push(`<span class="plan-badge save">HEMAT ${p.savePct}%</span>`);
+        }
+
+        const priceHtml = (p.isPromo && p.originalPrice > p.price)
+          ? `<div class="plan-price-row">
+              <span class="plan-card-price">${formatRupiah(p.price)}</span>
+              <span class="plan-card-original">${formatRupiah(p.originalPrice)}</span>
+             </div>`
+          : `<span class="plan-card-price">${formatRupiah(p.price)}</span>`;
+
+        let subDetail = `${formatRupiah(p.perDay)}/hari`;
+        if (p.isPromo && p.originalPrice > p.price) {
+          const hematNominal = p.originalPrice - p.price;
+          subDetail += ` • <span class="plan-hemat-text">Hemat ${formatRupiah(hematNominal)}</span>`;
+        } else if (p.popular && p.savePct >= 10) {
+          subDetail += ` • hemat ${p.savePct}%`;
+        }
+
         return `
-          <button type="button" class="plan-card" data-plan="${p.key}">
+          <button type="button" class="plan-card ${p.isPromo ? 'has-promo' : ''}" data-plan="${p.key}">
             ${badges.join('')}
-            <span class="plan-card-label">${p.label}</span>
-            <span class="plan-card-price">${formatRupiah(p.price)}</span>
-            <span class="plan-card-sub">${formatRupiah(p.perDay)}/hari${p.popular && p.savePct >= 10 ? ` • hemat ${p.savePct}%` : ''}</span>
+            <div class="plan-card-top">
+              <span class="plan-card-label">${p.label}</span>
+              ${p.isPromo ? `<span class="plan-tag-promo">Diskon</span>` : ''}
+            </div>
+            ${priceHtml}
+            <span class="plan-card-sub">${subDetail}</span>
+            <span class="plan-card-meta">+${p.days} Hari Pro Unlimited</span>
           </button>`;
       })
       .join('');
