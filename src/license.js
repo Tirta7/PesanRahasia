@@ -70,7 +70,8 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
 
   if (!bypassCache) {
     const cached = userLicenseCache.get(cleanEmail);
-    if (cached && Date.now() - cached.checkedAt < CACHE_TTL_MS) {
+    const ttl = (cached && cached.vocmlStatus === 'active') ? CACHE_TTL_MS : 2000;
+    if (cached && Date.now() - cached.checkedAt < ttl) {
       return cached;
     }
   }

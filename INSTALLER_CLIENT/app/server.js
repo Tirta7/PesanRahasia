@@ -94,6 +94,9 @@ function licenseSignature(l) {
     l.trialRemaining,
     l.reason,
     l.billing ? l.billing.amount : null,
+    l.billing ? l.billing.unique_code : null,
+    l.billing ? l.billing.qris : null,
+    l.billing ? l.billing.packages : null,
     l.licenseKey || null
   ]);
 }
@@ -668,6 +671,8 @@ const server = http.createServer(async (req, res) => {
           trialLimit: license.trialLimit || 3
         },
         license,
+        packages: license.billing?.packages || null,
+        billing: license.billing || null,
         status: license.status,
         allowed: license.allowed,
         locked: !license.allowed ? 1 : 0

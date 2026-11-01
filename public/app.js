@@ -481,30 +481,7 @@
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data && data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
-            publicConfig.plans = data.packages.map((p) => {
-              const orig = Number(p.original_price || p.basePrice || 0);
-              const pr = Number(p.amount || p.price || 0);
-              const isPromo = Boolean(p.is_promo || p.isPromo || (orig > 0 && orig > pr) || p.promo_badge || p.promoBadge);
-              let badge = p.promo_badge || p.promoBadge || '';
-              if (!badge && isPromo && orig > pr) {
-                badge = `DISKON ${Math.round((1 - pr / orig) * 100)}%`;
-              }
-              return {
-                key: p.key || p.id || String(p.days) + 'd',
-                name: p.name || `Paket ${p.label || `${p.days} Hari`}`,
-                label: p.label || `${p.days} Hari`,
-                days: Number(p.days) || 1,
-                price: pr,
-                originalPrice: orig > pr ? orig : (isPromo ? orig : 0),
-                isPromo,
-                promoBadge: badge,
-                popular: Boolean(p.popular),
-                perDay: p.per_day || Math.round(pr / (Number(p.days) || 1)),
-                savePct: p.save_pct || (orig > pr ? Math.round((1 - pr / orig) * 100) : 0),
-                qrisImageUrl: p.qris_image_url
-              };
-            });
-            renderPlanPicker(user, license);
+            updatePlansIfChanged(data.packages, user, license);
           }
         })
         .catch(() => {});
@@ -512,6 +489,40 @@
 
     showView(accountLicenseView);
     startLicensePolling();
+  }
+
+  let lastPackagesHash = '';
+  function updatePlansIfChanged(rawPackages, user, license) {
+    if (!rawPackages || !Array.isArray(rawPackages) || rawPackages.length === 0) return;
+    const hash = JSON.stringify(rawPackages);
+    if (hash === lastPackagesHash) return;
+    lastPackagesHash = hash;
+
+    publicConfig.plans = rawPackages.map((p) => {
+      const orig = Number(p.original_price || p.basePrice || 0);
+      const pr = Number(p.amount || p.price || 0);
+      const isPromo = Boolean(p.is_promo || p.isPromo || (orig > 0 && orig > pr) || p.promo_badge || p.promoBadge);
+      let badge = p.promo_badge || p.promoBadge || '';
+      if (!badge && isPromo && orig > pr) {
+        badge = `DISKON ${Math.round((1 - pr / orig) * 100)}%`;
+      }
+      return {
+        key: p.key || p.id || String(p.days) + 'd',
+        name: p.name || `Paket ${p.label || `${p.days} Hari`}`,
+        label: p.label || `${p.days} Hari`,
+        days: Number(p.days) || 1,
+        price: pr,
+        originalPrice: orig > pr ? orig : (isPromo ? orig : 0),
+        isPromo,
+        promoBadge: badge,
+        popular: Boolean(p.popular),
+        perDay: p.per_day || Math.round(pr / (Number(p.days) || 1)),
+        savePct: p.save_pct || (orig > pr ? Math.round((1 - pr / orig) * 100) : 0),
+        qrisImageUrl: p.qris_image_url
+      };
+    });
+
+    renderPlanPicker(user || currentUser, license || currentLicense);
   }
 
     let isCheckingPayStatus = false;
@@ -541,6 +552,11 @@
         const data = await res.json();
         if (data.user && data.license) {
           updateUserHeader(data.user, data.license);
+        }
+
+        const pkgs = data.packages || data.license?.billing?.packages || null;
+        if (pkgs && Array.isArray(pkgs) && pkgs.length > 0) {
+          updatePlansIfChanged(pkgs, data.user, data.license);
         }
 
         // Jika lisensi sudah aktif / di-generate di VOC ML
@@ -905,7 +921,8 @@
   }
 
   function applySelectedPlan() {
-    const { user, license } = planCtx;
+    const user = planCtx.user || currentUser;
+    const license = currentLicense || planCtx.license;
     const plan = getSelectedPlan();
     if (!plan || !license) return;
 
@@ -1168,6 +1185,11 @@
     if (!user || !license) return;
     const prev = currentLicense;
     updateUserHeader(user, license);
+
+    const pkgs = license.billing?.packages || null;
+    if (pkgs && Array.isArray(pkgs) && pkgs.length > 0) {
+      updatePlansIfChanged(pkgs, user, license);
+    }
 
     const shareVisible = shareView && !shareView.classList.contains('hidden');
     const licenseScreenVisible = accountLicenseView && !accountLicenseView.classList.contains('hidden');
