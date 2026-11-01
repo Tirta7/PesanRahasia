@@ -247,7 +247,7 @@ export async function getUserBySessionToken(token) {
 
   if (isPostgresReady && pool) {
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.picture, u.auth_provider AS "authProvider", u.messages_created AS "messagesCreated", u.created_at AS "createdAt", u.last_login_at AS "lastLoginAt"
+      `SELECT u.id, u.email, u.name, u.picture, u.auth_provider AS "authProvider", u.messages_created AS "messagesCreated", u.license_status AS "licenseStatus", u.machine_id AS "machineId", u.created_at AS "createdAt", u.last_login_at AS "lastLoginAt"
        FROM user_sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token = $1 AND s.expires_at > NOW()`,

@@ -789,8 +789,8 @@
     function startLicensePolling() {
       clearInterval(licensePollInterval);
       cekStatusBayar(false);
-      // Interval otomatis dipercepat menjadi SETIAP 2 DETIK (2000 ms)
-      licensePollInterval = setInterval(() => cekStatusBayar(false), 2000);
+      // Background polling backup setiap 3.5 detik (SSE menangani push instan realtime)
+      licensePollInterval = setInterval(() => cekStatusBayar(false), 3500);
     }
 
   // ============================================================================
@@ -1318,13 +1318,19 @@
       return;
     }
 
-    // Lisensi aktif
+    // Lisensi aktif Pro dari pembayaran atau generate key
     if (prev && !prev.allowed) {
-      clearInterval(licensePollInterval);
-      showView(createView);
-      startMyMessagesPolling();
-      showToast('🎉 Lisensi aktif! Aplikasi terbuka otomatis.');
-      return;
+      if (license.allowed && !license.isTrial) {
+        clearInterval(licensePollInterval);
+        showView(createView);
+        startMyMessagesPolling();
+        showToast('🎉 Lisensi aktif! Aplikasi terbuka otomatis.');
+        return;
+      }
+      if (license.isTrial) {
+        // Abaikan jika akun sebelumnya sudah terkunci agar tidak terpental kembali ke trial
+        return;
+      }
     }
 
     const expiryChanged = prev && (prev.expiresAt !== license.expiresAt || prev.daysLeft !== license.daysLeft);

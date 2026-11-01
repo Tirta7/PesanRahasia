@@ -57,7 +57,7 @@ export function emailToMachineId(email) {
  * Setiap user Gmail baru otomatis mendapatkan Trial Gratis 10x Pesan selama status VOC ML masih 'pending'.
  * Begitu 10x pesan gratis habis (messagesCreated >= 10), user wajib mengaktifkan lisensi berbayar.
  */
-export async function verifyUserAccountLicense({ email, name, messagesCreated = 0, bypassCache = false }) {
+export async function verifyUserAccountLicense({ email, name, messagesCreated = 0, licenseStatus = null, bypassCache = false }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanName = String(name || cleanEmail.split('@')[0]).trim();
   const machineId = emailToMachineId(cleanEmail);
@@ -70,7 +70,7 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
 
   if (!bypassCache) {
     const cached = userLicenseCache.get(cleanEmail);
-    const ttl = (cached && cached.vocmlStatus === 'active') ? CACHE_TTL_MS : 2000;
+    const ttl = (cached && cached.vocmlStatus === 'active') ? CACHE_TTL_MS : 3000;
     if (cached && Date.now() - cached.checkedAt < ttl) {
       return cached;
     }
@@ -114,13 +114,14 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
     const daysLeft = body.days_left ?? payload.days_left ?? null;
     const billing = body.billing || null;
 
-    // Deteksi kuota trial langsung dari server VOC ML
+    // Deteksi kuota trial langsung dari server VOC ML (VOC ML adalah Single Source of Truth)
     const vocmlTrial = body.trial || payload.trial || null;
     const configuredLimit = Number(process.env.FREE_TRIAL_LIMIT) || 3;
-    const rawServerQuota = vocmlTrial?.quota != null ? Number(vocmlTrial.quota) : configuredLimit;
-    const serverTrialQuota = Math.min(rawServerQuota, configuredLimit);
+    const serverTrialQuota = vocmlTrial?.quota != null ? Number(vocmlTrial.quota) : configuredLimit;
     const serverTrialUsed = vocmlTrial?.used != null ? Number(vocmlTrial.used) : trialUsed;
-    const serverTrialRemaining = Math.max(0, serverTrialQuota - serverTrialUsed);
+    const serverTrialRemaining = vocmlTrial?.remaining != null
+      ? Number(vocmlTrial.remaining)
+      : Math.max(0, serverTrialQuota - serverTrialUsed);
 
     let allowed = false;
     let isTrial = false;
@@ -198,12 +199,45 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
     userLicenseCache.set(cleanEmail, result);
     return result;
   } catch (err) {
+    console.warn(`[VOC ML] Gagal menghubungi ${VOCML_SERVER_URL}: ${err.message}`);
     const cached = userLicenseCache.get(cleanEmail);
-    if (cached && cached.vocmlStatus === 'active' && Date.now() - cached.checkedAt < 24 * 60 * 60 * 1000) {
+    if (cached) {
+      // PERTAHANKAN status lisensi terakhir yang sah dari VOC ML (apapun statusnya: active/locked/expired/trial)
+      // Jangan pernah ubah status 'expired' / 'locked' menjadi 'trial' saat offline atau rate-limited!
       return { ...cached, offline: true };
     }
 
-    if (trialRemaining > 0) {
+    // Jika belum ada cache di memori, periksa status lisensi dari database pengguna
+    const isKnownLocked = licenseStatus && ['expired', 'locked', 'trial_exhausted', 'inactive'].includes(licenseStatus);
+    if (isKnownLocked) {
+      return {
+        allowed: false,
+        isTrial: false,
+        status: licenseStatus,
+        vocmlStatus: 'offline',
+        reason: 'Masa berlaku lisensi akun Anda telah habis / belum aktif. Silakan lakukan pembayaran perpanjangan.',
+        machineId,
+        storeName,
+        email: cleanEmail,
+        expiresAt: null,
+        daysLeft: 0,
+        trialLimit: FREE_TRIAL_LIMIT,
+        trialUsed,
+        trialRemaining: 0,
+        trial: {
+          enabled: false,
+          quota: FREE_TRIAL_LIMIT,
+          used: FREE_TRIAL_LIMIT,
+          remaining: 0,
+          is_trial: false
+        },
+        billing: null,
+        offline: true
+      };
+    }
+
+    // Hanya berikan trial jika akun baru dan belum pernah berstatus expired/locked
+    if (trialRemaining > 0 && licenseStatus !== 'expired' && licenseStatus !== 'locked' && licenseStatus !== 'trial_exhausted') {
       return {
         allowed: true,
         isTrial: true,
@@ -251,7 +285,8 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
         remaining: 0,
         is_trial: true
       },
-      billing: null
+      billing: null,
+      offline: true
     };
   }
 }
@@ -346,21 +381,29 @@ export async function getVocmlBilling({ email, machineId }) {
 }
 
 /**
- * Mengambil pesan siaran / notifikasi admin VOC ML untuk client ini
+ * Mengambil pesan siaran / notifikasi admin VOC ML untuk client ini (Cache TTL: 15 detik)
  * Endpoint: GET /api/v1/messages?machine_id={mId}&product={product}
  */
+const vocmlMessagesCache = new Map();
 export async function getVocmlMessages({ email, machineId }) {
   const mId = machineId || emailToMachineId(email);
+  const cacheKey = `${mId}:${VOCML_PRODUCT}`;
+  const cached = vocmlMessagesCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < 15000) {
+    return cached.messages;
+  }
   try {
     const res = await fetch(`${VOCML_SERVER_URL}/api/v1/messages?machine_id=${encodeURIComponent(mId)}&product=${encodeURIComponent(VOCML_PRODUCT)}`, {
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(6000)
     });
-    if (!res.ok) return [];
+    if (!res.ok) return cached ? cached.messages : [];
     const data = await res.json().catch(() => ({}));
-    return Array.isArray(data.messages) ? data.messages : [];
+    const msgs = Array.isArray(data.messages) ? data.messages : [];
+    vocmlMessagesCache.set(cacheKey, { time: Date.now(), messages: msgs });
+    return msgs;
   } catch {
-    return [];
+    return cached ? cached.messages : [];
   }
 }
 

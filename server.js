@@ -141,7 +141,11 @@ async function refreshLicenseForEmail(email) {
     return;
   }
 
-  const license = await verifyUserAccountLicense({ ...user, bypassCache: true });
+  const license = await verifyUserAccountLicense({
+    ...user,
+    licenseStatus: user.licenseStatus,
+    bypassCache: false
+  });
   const messages = await getVocmlMessages({ email: user.email, machineId: license.machineId }).catch(() => []);
   const sig = licenseSignature(license) + ':' + JSON.stringify(messages);
   if (sig !== lastLicenseSignature.get(email)) {
@@ -158,7 +162,7 @@ async function refreshLicenseForEmail(email) {
   }
 }
 
-// Watcher: cek VOC ML setiap 2 detik hanya untuk akun yang sedang membuka aplikasi
+// Watcher: cek status lisensi akun VOC ML setiap 3.5 detik hanya untuk akun yang aktif membuka aplikasi
 setInterval(async () => {
   if (licenseWatcherBusy || licenseStreamClients.size === 0) return;
   licenseWatcherBusy = true;
@@ -171,7 +175,7 @@ setInterval(async () => {
   } finally {
     licenseWatcherBusy = false;
   }
-}, 2000).unref();
+}, 3500).unref();
 
 // Proteksi Brute-Force Login Admin & Rate Limiting
 const adminLoginAttempts = new Map();
@@ -653,12 +657,13 @@ const server = http.createServer(async (req, res) => {
       if (!user) {
         return sendJson(res, 401, { authenticated: false, allowed: false });
       }
-      const shouldBypass = parsedUrl.searchParams.get('fresh') === '1' || pathname === '/api/check-license';
+      const shouldBypass = parsedUrl.searchParams.get('fresh') === '1';
       if (shouldBypass) {
         invalidateUserLicenseCache(user.email);
       }
       const license = await verifyUserAccountLicense({
         ...user,
+        licenseStatus: user.licenseStatus,
         bypassCache: shouldBypass
       });
       await updateUserLicenseInDb({
