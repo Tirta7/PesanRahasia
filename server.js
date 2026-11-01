@@ -54,6 +54,7 @@ import {
 
 import {
   getLicenseStatus,
+  refreshHostLicense,
   verifyUserAccountLicense,
   renderLockedScreenHTML,
   invalidateUserLicenseCache,
@@ -162,8 +163,9 @@ async function refreshLicenseForEmail(email) {
   }
 }
 
-// Watcher: cek status lisensi akun VOC ML setiap 3.5 detik hanya untuk akun yang aktif membuka aplikasi
+// Watcher: cek status lisensi server induk & akun pengguna setiap 3.5 detik
 setInterval(async () => {
+  refreshHostLicense().catch(() => {});
   if (licenseWatcherBusy || licenseStreamClients.size === 0) return;
   licenseWatcherBusy = true;
   try {
@@ -460,7 +462,43 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/license-status') {
-      return sendJson(res, 200, getLicenseStatus());
+      const fresh = parsedUrl.searchParams.get('fresh') === '1';
+      const lic = await refreshHostLicense({ bypassCache: fresh });
+      return sendJson(res, 200, lic);
+    }
+
+    if (req.method === 'POST' && pathname === '/api/license/voucher/claim') {
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+      const machineId = (process.env.VOCML_MACHINE_ID || '').trim();
+      const code = String(body.code || '').trim().toUpperCase();
+      if (!code) {
+        return sendJson(res, 400, { error: 'Masukkan kode voucher.' });
+      }
+      try {
+        const resClaim = await fetch(`${VOCML_SERVER_URL}/api/v1/voucher/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            machine_id: machineId,
+            product: VOCML_PRODUCT,
+            code
+          })
+        });
+        const dataClaim = await resClaim.json().catch(() => ({}));
+        if (resClaim.ok) {
+          await refreshHostLicense({ bypassCache: true });
+          return sendJson(res, 200, { success: true, message: dataClaim.message || 'Voucher berhasil digunakan!' });
+        } else {
+          return sendJson(res, 400, { error: dataClaim.error || dataClaim.message || 'Kode voucher tidak valid.' });
+        }
+      } catch {
+        return sendJson(res, 500, { error: 'Gagal menghubungi server VOC ML.' });
+      }
     }
 
     const licenseStatus = getLicenseStatus();
@@ -1331,6 +1369,7 @@ const server = http.createServer(async (req, res) => {
 
 (async () => {
   await initDatabase();
+  await refreshHostLicense({ bypassCache: true }).catch(() => {});
   server.listen(PORT, () => {
     console.log(`\n=============================================================`);
     console.log(`🔒 Server Lokal PesanRahasia  : http://localhost:${PORT}`);

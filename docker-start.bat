@@ -22,3 +22,4 @@ echo Domain Publik: https://message.vocpos.id
 echo ===================================================
 echo.
 pause
+

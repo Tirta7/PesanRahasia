@@ -415,15 +415,420 @@ export function invalidateUserLicenseCache(email) {
   userLicenseCache.delete(String(email).trim().toLowerCase());
 }
 
+let hostLicenseState = {
+  allowed: true,
+  status: 'unmanaged',
+  reason: '',
+  machineId: (process.env.VOCML_MACHINE_ID || '').trim(),
+  storeName: (process.env.STORE_NAME || 'PklPesanRahasia1').trim(),
+  checkedAt: 0,
+  billing: null
+};
+
+/**
+ * Memeriksa lisensi tingkat server / komputer (Machine ID induk dari .env)
+ * Jika diatur di VOC ML sebagai 'locked' atau 'expired', seluruh situs langsung terkunci.
+ */
+export async function refreshHostLicense({ bypassCache = false } = {}) {
+  const machineId = (process.env.VOCML_MACHINE_ID || '').trim();
+  const enabled = process.env.VOCML_ENABLED === 'true';
+
+  if (!enabled || !machineId) {
+    hostLicenseState = {
+      allowed: true,
+      status: 'unmanaged',
+      reason: '',
+      machineId,
+      storeName: (process.env.STORE_NAME || 'PklPesanRahasia1').trim(),
+      checkedAt: Date.now(),
+      billing: null
+    };
+    return hostLicenseState;
+  }
+
+  // Cache 3 detik agar responsif terhadap perubahan status di VOC ML
+  if (!bypassCache && hostLicenseState.checkedAt && (Date.now() - hostLicenseState.checkedAt < 3000)) {
+    return hostLicenseState;
+  }
+
+  try {
+    const qs = new URLSearchParams({
+      machine_id: machineId,
+      product: VOCML_PRODUCT,
+      app_version: '1.0.0'
+    });
+
+    let res = await fetch(`${VOCML_SERVER_URL}/api/v1/check?${qs}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(6000)
+    });
+
+    if (res.status === 404) {
+      res = await fetch(`${VOCML_SERVER_URL}/api/v1/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(6000),
+        body: JSON.stringify({
+          machine_id: machineId,
+          product: VOCML_PRODUCT,
+          store_name: process.env.STORE_NAME || 'PklPesanRahasia1',
+          app_version: '1.0.0'
+        })
+      });
+    }
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const body = await res.json();
+    const payload = verifyToken(body.token, VOCML_PUBLIC_KEY) || body;
+    const status = payload.status || body.status || 'pending';
+    const allowed = (status === 'active' || status === 'expiring');
+    const reason = payload.lock_reason || body.lock_reason || (
+      status === 'locked' ? 'Aplikasi dikunci oleh admin VOC ML' :
+      status === 'expired' ? 'Masa berlaku lisensi server telah habis' :
+      status === 'pending' ? 'Menunggu aktivasi lisensi dari admin VOC ML' : ''
+    );
+
+    hostLicenseState = {
+      allowed,
+      status,
+      reason,
+      machineId,
+      storeName: process.env.STORE_NAME || 'PklPesanRahasia1',
+      expiresAt: payload.expires_at ?? body.expires_at ?? null,
+      daysLeft: body.days_left ?? payload.days_left ?? null,
+      billing: body.billing || null,
+      checkedAt: Date.now()
+    };
+    return hostLicenseState;
+  } catch (err) {
+    console.warn(`[VOC ML Host] Gagal memeriksa lisensi server induk: ${err.message}`);
+    // Jangan izinkan jika sebelumnya sudah terkunci
+    return { ...hostLicenseState, offline: true };
+  }
+}
+
 export function getLicenseStatus() {
+  const enabled = process.env.VOCML_ENABLED === 'true';
+  const machineId = (process.env.VOCML_MACHINE_ID || '').trim();
+  if (!enabled || !machineId) {
+    return {
+      mode: 'per-gmail-account',
+      serverUrl: VOCML_SERVER_URL,
+      product: VOCML_PRODUCT,
+      allowed: true
+    };
+  }
   return {
-    mode: 'per-gmail-account',
+    ...hostLicenseState,
+    mode: 'dual-layer',
     serverUrl: VOCML_SERVER_URL,
-    product: VOCML_PRODUCT,
-    allowed: true
+    product: VOCML_PRODUCT
   };
 }
 
 export function renderLockedScreenHTML(status) {
-  return `<!DOCTYPE html><html lang="id"><body><h1>${status.reason || 'Terkunci'}</h1></body></html>`;
+  const storeName = status.storeName || process.env.STORE_NAME || 'Server PesanRahasia';
+  const machineId = status.machineId || process.env.VOCML_MACHINE_ID || '-';
+  const reason = status.reason || 'Aplikasi terkunci menunggu aktivasi lisensi dari admin.';
+  const billing = status.billing || null;
+  const packages = billing?.packages || [];
+  const defaultQris = billing?.qris_image_url || '';
+  const defaultAmount = billing?.amount_text || '';
+
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aplikasi Terkunci — VOC ML</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #1e0909 0%, #0c0404 100%);
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .lock-card {
+      background: rgba(26, 12, 12, 0.95);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px -15px rgba(239, 68, 68, 0.25);
+      backdrop-filter: blur(12px);
+    }
+    .lock-icon-wrap {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 18px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.2); }
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #fee2e2; margin-bottom: 8px; }
+    .desc { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 22px; line-height: 1.5; }
+    .info-box {
+      background: rgba(15, 6, 6, 0.75);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-label { color: #94a3b8; }
+    .info-val { color: #f8fafc; font-weight: 600; text-align: right; }
+    .machine-badge {
+      font-family: monospace;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      padding: 2px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .status-alert {
+      background: rgba(239, 68, 68, 0.2);
+      border-left: 4px solid #ef4444;
+      color: #fca5a5;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+    .qris-section {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+    .qris-img {
+      max-width: 220px;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 10px auto;
+      display: block;
+    }
+    .pkg-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+      justify-content: center;
+    }
+    .pkg-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pkg-btn.active {
+      background: #10b981;
+      border-color: #10b981;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 13px 20px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+    .btn-action:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .voucher-form { display: flex; gap: 8px; margin-top: 14px; }
+    .voucher-input {
+      flex: 1;
+      background: rgba(15, 6, 6, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: white;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+    .voucher-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .poll-hint { font-size: 0.78rem; color: #94a3b8; margin-top: 14px; }
+    .poll-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      margin-right: 6px;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  </style>
+</head>
+<body>
+  <div class="lock-card">
+    <div class="lock-icon-wrap">🔒</div>
+    <h1>Aplikasi Terkunci</h1>
+    <p class="desc">Aplikasi ini membutuhkan lisensi aktif dari server pusat <strong>VOC ML</strong>. Halaman akan otomatis terbuka setelah lisensi disetujui / diaktifkan.</p>
+
+    <div class="status-alert">
+      <strong>Status:</strong> ${reason}
+    </div>
+
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Outlet / Server:</span>
+        <span class="info-val">${storeName}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Machine ID:</span>
+        <span class="info-val"><span class="machine-badge" onclick="navigator.clipboard.writeText('${machineId}'); alert('Machine ID disalin!');">${machineId}</span></span>
+      </div>
+    </div>
+
+    ${packages.length > 0 ? `
+    <div class="pkg-selector" id="pkg-list">
+      ${packages.map((pkg, idx) => `
+        <button type="button" class="pkg-btn ${idx === 0 ? 'active' : ''}" onclick="selectPackage(${idx})">
+          ${pkg.label || pkg.name}
+        </button>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    ${defaultQris ? `
+    <div class="qris-section">
+      <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; color:#64748b;">Tagihan Perpanjangan Lisensi</div>
+      <div id="qris-amount" style="font-size:1.35rem; font-weight:800; color:#0f172a; margin:4px 0;">${defaultAmount}</div>
+      <img id="qris-img" class="qris-img" src="${defaultQris}" alt="QRIS VOC ML" />
+      <div style="font-size:0.75rem; color:#64748b;">Scan QRIS di atas dengan m-Banking / E-Wallet</div>
+    </div>
+    ` : ''}
+
+    <button type="button" id="btn-check" class="btn-action" onclick="checkStatusInstan()">
+      ✅ Saya Sudah Bayar / Buka Sekarang
+    </button>
+
+    <div class="voucher-form">
+      <input type="text" id="voucher-input" class="voucher-input" placeholder="KODE VOUCHER PROMO..." />
+      <button type="button" class="voucher-btn" onclick="claimVoucher()">Gunakan</button>
+    </div>
+    <div id="voucher-msg" style="font-size:0.8rem; margin-top:8px; display:none;"></div>
+
+    <div class="poll-hint">
+      <span class="poll-dot"></span>Memeriksa status aktivasi otomatis setiap 2 detik...
+    </div>
+  </div>
+
+  <script>
+    const packagesData = ${JSON.stringify(packages)};
+    function selectPackage(idx) {
+      document.querySelectorAll('.pkg-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+      const pkg = packagesData[idx];
+      if (!pkg) return;
+      const img = document.getElementById('qris-img');
+      const amt = document.getElementById('qris-amount');
+      if (img && pkg.qris_image_url) img.src = pkg.qris_image_url;
+      if (amt && pkg.amount_text) amt.textContent = pkg.amount_text;
+    }
+
+    async function checkStatusInstan() {
+      const btn = document.getElementById('btn-check');
+      if (btn) { btn.innerText = '⏳ Memeriksa...'; btn.disabled = true; }
+      try {
+        const res = await fetch('/api/license-status?fresh=1');
+        const data = await res.json();
+        if (data.allowed) {
+          alert('🎉 Lisensi aktif! Membuka aplikasi...');
+          location.reload();
+          return;
+        }
+        alert('⚠️ Status masih: ' + (data.reason || 'Terkunci di VOC ML. Pastikan sudah klik Generate Key di VOC ML.'));
+      } catch {
+        alert('Gagal menghubungi server.');
+      } finally {
+        if (btn) { btn.innerText = '✅ Saya Sudah Bayar / Buka Sekarang'; btn.disabled = false; }
+      }
+    }
+
+    async function claimVoucher() {
+      const inp = document.getElementById('voucher-input');
+      const msg = document.getElementById('voucher-msg');
+      const code = (inp?.value || '').trim();
+      if (!code) return;
+      msg.style.display = 'block';
+      msg.style.color = '#94a3b8';
+      msg.innerText = 'Memverifikasi voucher...';
+      try {
+        const res = await fetch('/api/license/voucher/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          msg.style.color = '#10b981';
+          msg.innerText = d.message || 'Voucher berhasil! Membuka aplikasi...';
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          msg.style.color = '#ef4444';
+          msg.innerText = d.error || 'Voucher tidak valid.';
+        }
+      } catch {
+        msg.style.color = '#ef4444';
+        msg.innerText = 'Gagal menghubungi server.';
+      }
+    }
+
+    // Auto-polling status lisensi server setiap 2 detik
+    setInterval(async () => {
+      try {
+        const res = await fetch('/api/license-status');
+        const data = await res.json();
+        if (data.allowed) {
+          location.reload();
+        }
+      } catch {}
+    }, 2000);
+  </script>
+</body>
+</html>`;
 }
