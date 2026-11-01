@@ -29,6 +29,8 @@ services:
         condition: service_healthy
     ports:
       - "${PORT:-3006}:3006"
+    env_file:
+      - .env
     environment:
       PORT: 3006
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://message.vocpos.id}
@@ -40,9 +42,8 @@ services:
       STORE_NAME: ${STORE_NAME:-PesanRahasia VOCPOS}
       VOCML_ENABLED: ${VOCML_ENABLED:-true}
       VOCML_SERVER_URL: ${VOCML_SERVER_URL:-https://vocml.vocpos.id}
-      VOCML_PRODUCT: ${VOCML_PRODUCT:-pos}
-      VOCML_MACHINE_ID: ${VOCML_MACHINE_ID:-}
-      VOCML_CACHE_FILE: /data/license-cache.json
+      VOCML_PRODUCT: ${VOCML_PRODUCT:-messagerahasia}
+      FREE_TRIAL_LIMIT: ${FREE_TRIAL_LIMIT:-3}
     volumes:
       - ./data:/data
     healthcheck:
