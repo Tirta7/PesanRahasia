@@ -165,7 +165,16 @@ async function refreshLicenseForEmail(email) {
 
 // Watcher: cek status lisensi server induk & akun pengguna setiap 3.5 detik
 setInterval(async () => {
-  refreshHostLicense().catch(() => {});
+  const hostLic = await refreshHostLicense().catch(() => null);
+  if (hostLic && !hostLic.allowed && licenseStreamClients.size > 0) {
+    for (const clients of licenseStreamClients.values()) {
+      for (const c of clients) {
+        try {
+          sendSse(c.res, 'host_lock', { allowed: false, reason: hostLic.reason });
+        } catch {}
+      }
+    }
+  }
   if (licenseWatcherBusy || licenseStreamClients.size === 0) return;
   licenseWatcherBusy = true;
   try {
@@ -503,6 +512,15 @@ const server = http.createServer(async (req, res) => {
 
     const licenseStatus = getLicenseStatus();
     if (!licenseStatus.allowed) {
+      if (pathname.startsWith('/api/')) {
+        return sendJson(res, 403, {
+          status: 'locked',
+          allowed: false,
+          hostLocked: true,
+          reason: licenseStatus.reason || 'Aplikasi terkunci dari server pusat VOC ML.',
+          machineId: licenseStatus.machineId
+        });
+      }
       setSecurityHeaders(res);
       res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(renderLockedScreenHTML(licenseStatus));

@@ -33,9 +33,7 @@ const VOCML_SERVER_URL = (process.env.VOCML_SERVER_URL || 'https://vocml.vocpos.
   .replace('lisensi.vocpos.id', 'vocml.vocpos.id')
   .replace(/\/+$/, '');
 
-const VOCML_PRODUCT = ['pos', 'billiard'].includes(process.env.VOCML_PRODUCT)
-  ? process.env.VOCML_PRODUCT
-  : 'pos';
+const VOCML_PRODUCT = process.env.VOCML_PRODUCT || 'messagerahasia';
 
 const VOCML_PUBLIC_KEY = process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY;
 export const FREE_TRIAL_LIMIT = Number(process.env.FREE_TRIAL_LIMIT) || 10;

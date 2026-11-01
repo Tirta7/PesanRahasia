@@ -1258,6 +1258,35 @@
   }
 
   // ============================================================================
+  // 2A-0. REALTIME HOST SERVER LICENSE WATCHER (VOC ML)
+  // Memeriksa status lisensi server induk setiap 3 detik.
+  // Jika mesin server dikunci oleh admin VOC ML, browser langsung reload
+  // menampilkan Layar Merah (APLIKASI TERKUNCI) secara realtime.
+  // ============================================================================
+  let hostLockPollingBusy = false;
+  setInterval(async () => {
+    if (hostLockPollingBusy) return;
+    hostLockPollingBusy = true;
+    try {
+      const res = await fetch('/api/license-status', { cache: 'no-store' });
+      if (res.status === 403) {
+        window.location.reload();
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.allowed === false) {
+          window.location.reload();
+        }
+      }
+    } catch {
+      // Abaikan jika jaringan offline sesaat
+    } finally {
+      hostLockPollingBusy = false;
+    }
+  }, 3000);
+
+  // ============================================================================
   // 2A. LIVE LICENSE STREAM (SSE) — Perubahan VOC ML / QRIS langsung tanpa refresh
   // ============================================================================
   let licenseEventSource = null;
@@ -1283,6 +1312,10 @@
       } catch {
         // Abaikan payload rusak
       }
+    });
+
+    licenseEventSource.addEventListener('host_lock', () => {
+      window.location.reload();
     });
 
     licenseEventSource.addEventListener('logout', () => {
@@ -1580,7 +1613,13 @@
           })
         });
 
-        const data = await res.json();
+        let data = {};
+        try {
+          data = await res.json();
+        } catch {
+          data = {};
+        }
+
         if (res.status === 401) {
           setSessionToken('');
           updateUserHeader(null);
@@ -1588,9 +1627,15 @@
           throw new Error('Sesi login Gmail telah habis, silakan masuk kembali.');
         }
 
-        if (res.status === 403 && data.license) {
-          applyAuthAndLicenseState(currentUser, data.license, false);
-          throw new Error(data.error || 'Lisensi akun Gmail Anda belum aktif.');
+        if (res.status === 403) {
+          if (data.hostLocked || data.allowed === false) {
+            window.location.reload();
+            return;
+          }
+          if (data.license) {
+            applyAuthAndLicenseState(currentUser, data.license, false);
+            throw new Error(data.error || 'Lisensi akun Gmail Anda belum aktif.');
+          }
         }
 
         if (!res.ok) {
