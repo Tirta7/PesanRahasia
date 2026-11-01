@@ -166,22 +166,44 @@
           </div>
         </div>
 
-        <!-- Kotak Tagihan QRIS Dinamis (Otomatis Muncul Jika Diatur di VOC ML) -->
-        <div id="lic-qris-box" class="lic-qris-box hidden">
+        <!-- Pemilih Paket Durasi Multi-Tier -->
+        <div id="plan-picker" class="plan-picker">
+          <label class="plan-picker-title">Pilih Paket Durasi Lisensi:</label>
+          <div id="plan-list" class="plan-list"></div>
+          <div id="plan-expiry-info" class="plan-expiry-info"></div>
+        </div>
+
+        <!-- Kotak Tagihan QRIS Dinamis (Otomatis Muncul & Berubah Sesuai Paket) -->
+        <div id="lic-qris-box" class="lic-qris-box">
           <div class="qris-header">
             <span class="qris-badge">TAGIHAN LISENSI QRIS</span>
-            <strong id="qris-amount" class="qris-amount">Rp 0</strong>
+            <strong id="qris-amount" class="qris-amount">Rp 60.000</strong>
           </div>
-          <p id="qris-merchant" class="qris-merchant"></p>
+          <p id="qris-merchant" class="qris-merchant">VIRTUAL OPERATION CONTROL • SIDOARJO</p>
           <div class="qris-img-wrap">
             <img id="qris-img" src="" alt="QRIS Pembayaran Lisensi" />
           </div>
-          <p id="qris-note" class="qris-note">Scan QRIS di atas menggunakan aplikasi Mobile Banking atau E-Wallet Anda.</p>
+          <p id="qris-note" class="qris-note">Scan QRIS di atas untuk membayar perpanjangan lisensi. Nominal otomatis terisi saat discan.</p>
+
+          <div style="margin-top: 15px; text-align: center;">
+            <button type="button" id="btnCekBayar" class="btn btn-pay-check">
+              ✅ Saya Sudah Bayar (Buka Sekarang)
+            </button>
+            <div id="payStatusTeks" class="pay-status-text">
+              <span class="pulse-dot-amber"></span>
+              <span>Menunggu pembayaran masuk... (dicek otomatis tiap 2 detik)</span>
+            </div>
+          </div>
         </div>
 
-        <div class="lic-polling-bar">
-          <span class="pulse-dot-red"></span>
-          <span>Memeriksa status aktivasi dari server pusat setiap 5 detik... Halaman akan terbuka otomatis setelah diaktifkan.</span>
+        <!-- Form Input Kode Voucher Promo VOC ML -->
+        <div class="voucher-box" id="voucher-box">
+          <div class="voucher-title">🎁 Punya Kode Voucher Promo?</div>
+          <div class="voucher-row">
+            <input type="text" id="voucher-code-input" placeholder="Masukkan Kode Voucher (misal: COBAGRATIS / DISKON20K)" autocomplete="off" />
+            <button type="button" id="btn-claim-voucher" class="btn btn-voucher">Gunakan Voucher</button>
+          </div>
+          <div id="voucher-feedback" class="voucher-feedback hidden"></div>
         </div>
 
         <div class="lic-actions-stack">

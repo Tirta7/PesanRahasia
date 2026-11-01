@@ -57,7 +57,12 @@ import {
   verifyUserAccountLicense,
   renderLockedScreenHTML,
   invalidateUserLicenseCache,
-  emailToMachineId
+  emailToMachineId,
+  consumeTrialQuota,
+  claimVoucher,
+  getVocmlBilling,
+  VOCML_PRODUCT,
+  VOCML_SERVER_URL
 } from './src/license.js';
 import { LICENSE_PLANS, findPlan, formatRupiah } from './src/plans.js';
 import { getVapidKeys, sendWebPushNotification, generatePwaIconPng } from './src/webpush.js';
@@ -509,6 +514,72 @@ const server = http.createServer(async (req, res) => {
         tag: `order-${orderUser.email}`
       });
       return sendJson(res, 200, { success: true, plan });
+    }
+
+    // Endpoint Ambil Billing & Paket QRIS Dinamis dari VOC ML
+    if (req.method === 'GET' && pathname === '/api/billing') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      const machineId = emailToMachineId(user.email);
+      const billingData = await getVocmlBilling({ email: user.email, machineId });
+
+      let packages = billingData?.billing?.packages || null;
+      if (!packages || !Array.isArray(packages) || packages.length === 0) {
+        packages = LICENSE_PLANS.map((p) => ({
+          key: p.key,
+          label: p.label,
+          days: p.days,
+          amount: p.price,
+          amount_text: formatRupiah(p.price),
+          popular: p.popular,
+          per_day: p.perDay,
+          save_pct: p.savePct,
+          qris_image_url: `${VOCML_SERVER_URL}/api/v1/billing/qris.png?machine_id=${encodeURIComponent(machineId)}&product=${encodeURIComponent(VOCML_PRODUCT)}&amount=${p.price}`
+        }));
+      }
+
+      return sendJson(res, 200, {
+        ok: true,
+        machine_id: machineId,
+        product: VOCML_PRODUCT,
+        packages,
+        billing: billingData?.billing || null
+      });
+    }
+
+    // Endpoint Klaim Voucher Promo VOC ML
+    if (req.method === 'POST' && pathname === '/api/voucher/claim') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      let body;
+      try {
+        body = await parseJsonBody(req, 16 * 1024);
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+      const code = String(body.code || '').trim().toUpperCase();
+      if (!code) {
+        return sendJson(res, 400, { error: 'Kode voucher wajib diisi.' });
+      }
+      const machineId = emailToMachineId(user.email);
+      const result = await claimVoucher({ email: user.email, machineId, code });
+      if (!result.ok) {
+        return sendJson(res, 400, { error: result.error });
+      }
+      const freshLicense = await verifyUserAccountLicense({ ...user, bypassCache: true });
+      return sendJson(res, 200, {
+        ok: true,
+        message: result.message,
+        type: result.type,
+        data: result.data,
+        license: freshLicense
+      });
     }
 
     // Live License Stream (SSE): push instan perubahan lisensi VOC ML ke browser
@@ -994,6 +1065,19 @@ const server = http.createServer(async (req, res) => {
           error: license.reason || 'Lisensi akun Gmail Anda belum aktif.',
           license
         });
+      }
+
+      // Jika akun menggunakan kuota trial, konsumsi kuota di server VOC ML
+      if (license.isTrial || license.status === 'trial') {
+        const consumeRes = await consumeTrialQuota({ email: user.email, machineId: license.machineId });
+        if (!consumeRes.ok && consumeRes.exhausted) {
+          const freshLic = await verifyUserAccountLicense({ ...user, bypassCache: true });
+          return sendJson(res, 403, {
+            error: consumeRes.message || 'Kuota Trial Gratis Anda telah habis. Silakan aktifkan lisensi Pro.',
+            license: freshLic,
+            trial_exhausted: true
+          });
+        }
       }
 
       let body;

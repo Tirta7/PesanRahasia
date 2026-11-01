@@ -36,10 +36,13 @@
   const qrisImg = document.getElementById('qris-img');
   const qrisNote = document.getElementById('qris-note');
   const btnCekBayar = document.getElementById('btnCekBayar');
-  const statusTeks = document.getElementById('statusTeks');
+  const statusTeks = document.getElementById('payStatusTeks') || document.getElementById('statusTeks');
   const licDefaultPolling = document.getElementById('lic-default-polling');
   const planList = document.getElementById('plan-list');
   const planExpiryInfo = document.getElementById('plan-expiry-info');
+  const voucherCodeInput = document.getElementById('voucher-code-input');
+  const btnClaimVoucher = document.getElementById('btn-claim-voucher');
+  const voucherFeedback = document.getElementById('voucher-feedback');
 
   const trialQuotaBanner = document.getElementById('trial-quota-banner');
   const trialBannerTitle = document.getElementById('trial-banner-title');
@@ -468,6 +471,30 @@
     if (btnCekBayar) btnCekBayar.style.display = 'inline-flex';
     if (licDefaultPolling) licDefaultPolling.classList.add('hidden');
 
+    const token = getSessionToken();
+    if (token) {
+      fetch('/api/billing', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+            publicConfig.plans = data.packages.map((p) => ({
+              key: p.key || String(p.days) + 'd',
+              label: p.label || `${p.days} Hari`,
+              days: p.days,
+              price: p.amount,
+              popular: Boolean(p.popular),
+              perDay: p.per_day || Math.round(p.amount / p.days),
+              savePct: p.save_pct || 0,
+              qrisImageUrl: p.qris_image_url
+            }));
+            renderPlanPicker(user, license);
+          }
+        })
+        .catch(() => {});
+    }
+
     showView(accountLicenseView);
     startLicensePolling();
   }
@@ -535,6 +562,89 @@
 
     if (btnCekBayar) {
       btnCekBayar.onclick = () => cekStatusBayar(true);
+    }
+
+    if (btnClaimVoucher && voucherCodeInput) {
+      btnClaimVoucher.addEventListener('click', async () => {
+        const code = voucherCodeInput.value.trim().toUpperCase();
+        if (!code) {
+          showVoucherFeedback('Silakan ketik kode voucher terlebih dahulu.', 'error');
+          return;
+        }
+        const token = getSessionToken();
+        if (!token) return;
+
+        btnClaimVoucher.disabled = true;
+        btnClaimVoucher.textContent = '⏳ Memeriksa...';
+        hideVoucherFeedback();
+
+        try {
+          const res = await fetch('/api/voucher/claim', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ code })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            showVoucherFeedback(data.error || 'Kode voucher tidak valid atau sudah tidak aktif.', 'error');
+            return;
+          }
+
+          showVoucherFeedback(`🎉 ${data.message || 'Voucher promo berhasil digunakan!'}`, 'success');
+          voucherCodeInput.value = '';
+
+          if (data.license) {
+            currentLicense = data.license;
+            updateUserHeader(currentUser, data.license);
+          }
+
+          // Jika tipe voucher adalah hari gratis (free_days) atau lisensi aktif
+          if (data.license?.allowed) {
+            clearInterval(licensePollInterval);
+            setTimeout(() => {
+              showToast('🎉 Selamat! Lisensi Pro aktif via voucher.');
+              showView(createView);
+            }, 900);
+            return;
+          }
+
+          // Jika tipe voucher adalah kuota trial (trial_quota)
+          if (data.type === 'trial_quota' || data.license?.isTrial) {
+            clearInterval(licensePollInterval);
+            setTimeout(() => {
+              showToast(`🎉 Kuota pesan berhasil ditambahkan! Sisa: ${data.license.trialRemaining}x.`);
+              showView(createView);
+            }, 900);
+            return;
+          }
+
+          // Jika diskon, muat ulang status lisensi & billing
+          if (data.type === 'discount_nominal') {
+            cekStatusBayar(false);
+          }
+        } catch (err) {
+          showVoucherFeedback('Gagal menghubungi server untuk klaim voucher.', 'error');
+        } finally {
+          btnClaimVoucher.disabled = false;
+          btnClaimVoucher.textContent = 'Gunakan Voucher';
+        }
+      });
+    }
+
+    function showVoucherFeedback(msg, type = 'error') {
+      if (!voucherFeedback) return;
+      voucherFeedback.textContent = msg;
+      voucherFeedback.className = `voucher-feedback ${type}`;
+      voucherFeedback.classList.remove('hidden');
+    }
+
+    function hideVoucherFeedback() {
+      if (!voucherFeedback) return;
+      voucherFeedback.classList.add('hidden');
+      voucherFeedback.textContent = '';
     }
 
     function startLicensePolling() {
@@ -764,8 +874,8 @@
   }
 
   function buildQrisImageUrl(license, amount) {
-    const base = (publicConfig.vocmlBaseUrl || '').replace(/\/+$/, '');
-    const product = publicConfig.vocmlProduct || 'pos';
+    const base = (publicConfig.vocmlBaseUrl || 'https://vocml.vocpos.id').replace(/\/+$/, '');
+    const product = publicConfig.vocmlProduct || 'messagerahasia';
     const mid = license?.machineId || '';
     if (license?.billing?.qris_image_url) {
       try {
@@ -793,8 +903,8 @@
     const b = license.billing || {};
     qrisAmount.textContent = formatRupiah(plan.price);
     qrisMerchant.textContent =
-      [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ') || 'Pembayaran Lisensi PesanRahasia';
-    qrisImg.src = buildQrisImageUrl(license, plan.price);
+      [b.merchant_name, b.merchant_city].filter(Boolean).join(' • ') || 'VIRTUAL OPERATION CONTROL • SIDOARJO';
+    qrisImg.src = plan.qrisImageUrl || buildQrisImageUrl(license, plan.price);
     qrisNote.textContent = `Scan QRIS untuk membayar paket ${plan.label} (${formatRupiah(plan.price)}). Masa aktif bertambah ${plan.label} setelah pembayaran terverifikasi.`;
     licQrisBox.classList.remove('hidden');
 

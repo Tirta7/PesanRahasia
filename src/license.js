@@ -29,13 +29,11 @@ const DEFAULT_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEADenKScMcRxd/GFPnwHLgO26Y3mKwNmtyUR1KPQgLTFI=
 -----END PUBLIC KEY-----`;
 
-const VOCML_SERVER_URL = (process.env.VOCML_SERVER_URL || 'https://vocml.vocpos.id')
+export const VOCML_SERVER_URL = (process.env.VOCML_SERVER_URL || 'https://vocml.vocpos.id')
   .replace('lisensi.vocpos.id', 'vocml.vocpos.id')
   .replace(/\/+$/, '');
 
-const VOCML_PRODUCT = ['pos', 'billiard'].includes(process.env.VOCML_PRODUCT)
-  ? process.env.VOCML_PRODUCT
-  : 'pos';
+export const VOCML_PRODUCT = process.env.VOCML_PRODUCT || 'messagerahasia';
 
 const VOCML_PUBLIC_KEY = process.env.VOCML_PUBLIC_KEY || DEFAULT_PUBLIC_KEY;
 export const FREE_TRIAL_LIMIT = Number(process.env.FREE_TRIAL_LIMIT) || 10;
@@ -115,6 +113,14 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
     const daysLeft = body.days_left ?? payload.days_left ?? null;
     const billing = body.billing || null;
 
+    // Deteksi kuota trial langsung dari server VOC ML
+    const vocmlTrial = body.trial || payload.trial || null;
+    const serverTrialQuota = vocmlTrial?.quota != null ? Number(vocmlTrial.quota) : FREE_TRIAL_LIMIT;
+    const serverTrialUsed = vocmlTrial?.used != null ? Number(vocmlTrial.used) : trialUsed;
+    const serverTrialRemaining = vocmlTrial?.remaining != null
+      ? Number(vocmlTrial.remaining)
+      : Math.max(0, serverTrialQuota - serverTrialUsed);
+
     let allowed = false;
     let isTrial = false;
     let status = vocmlStatus;
@@ -125,19 +131,31 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       isTrial = false;
       status = vocmlStatus;
       reason = vocmlStatus === 'expiring' ? 'Lisensi Pro Aktif (Segera Berakhir)' : 'Lisensi Pro Aktif (Unlimited)';
+    } else if (vocmlStatus === 'trial' || (vocmlStatus === 'pending' && vocmlTrial)) {
+      if (serverTrialRemaining > 0) {
+        allowed = true;
+        isTrial = true;
+        status = 'trial';
+        reason = `Akun Trial: Sisa ${serverTrialRemaining}x kirim pesan rahasia`;
+      } else {
+        allowed = false;
+        isTrial = false;
+        status = 'trial_exhausted';
+        reason = `Kuota Trial Gratis ${serverTrialQuota}x pesan telah habis. Silakan aktifkan lisensi Pro.`;
+      }
     } else if (vocmlStatus === 'pending') {
       if (trialRemaining > 0) {
         allowed = true;
         isTrial = true;
         status = 'trial';
-        reason = `Trial Gratis Aktif (Sisa ${trialRemaining} dari ${FREE_TRIAL_LIMIT} pesan)`;
+        reason = `Akun Trial: Sisa ${trialRemaining}x kirim pesan rahasia`;
       } else {
         allowed = false;
         isTrial = false;
         status = 'trial_exhausted';
-        reason = `Kuota Trial Gratis ${FREE_TRIAL_LIMIT}x pesan telah habis (${trialUsed}/${FREE_TRIAL_LIMIT} terpakai). Silakan aktifkan lisensi berbayar.`;
+        reason = `Kuota Trial Gratis ${FREE_TRIAL_LIMIT}x pesan telah habis (${trialUsed}/${FREE_TRIAL_LIMIT} terpakai). Silakan aktifkan lisensi Pro.`;
       }
-    } else if (vocmlStatus === 'locked' || body.locked) {
+    } else if (vocmlStatus === 'locked' || body.locked || body.is_locked) {
       allowed = false;
       isTrial = false;
       status = 'locked';
@@ -160,9 +178,16 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       email: cleanEmail,
       expiresAt,
       daysLeft,
-      trialLimit: FREE_TRIAL_LIMIT,
-      trialUsed,
-      trialRemaining,
+      trialLimit: serverTrialQuota,
+      trialUsed: serverTrialUsed,
+      trialRemaining: serverTrialRemaining,
+      trial: vocmlTrial || {
+        enabled: true,
+        quota: serverTrialQuota,
+        used: serverTrialUsed,
+        remaining: serverTrialRemaining,
+        is_trial: isTrial
+      },
       licenseKey: payload.license_key || body.license_key || null,
       billing,
       checkedAt: Date.now()
@@ -182,7 +207,7 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
         isTrial: true,
         status: 'trial',
         vocmlStatus: 'pending',
-        reason: `Trial Gratis Aktif (Sisa ${trialRemaining} dari ${FREE_TRIAL_LIMIT} pesan)`,
+        reason: `Akun Trial: Sisa ${trialRemaining}x kirim pesan rahasia`,
         machineId,
         storeName,
         email: cleanEmail,
@@ -191,6 +216,13 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
         trialLimit: FREE_TRIAL_LIMIT,
         trialUsed,
         trialRemaining,
+        trial: {
+          enabled: true,
+          quota: FREE_TRIAL_LIMIT,
+          used: trialUsed,
+          remaining: trialRemaining,
+          is_trial: true
+        },
         billing: null,
         offline: true
       };
@@ -201,7 +233,7 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       isTrial: false,
       status: 'trial_exhausted',
       vocmlStatus: 'offline',
-      reason: `Kuota Trial Gratis ${FREE_TRIAL_LIMIT}x pesan telah habis. Silakan aktifkan lisensi berbayar.`,
+      reason: `Kuota Trial Gratis ${FREE_TRIAL_LIMIT}x pesan telah habis. Silakan aktifkan lisensi Pro.`,
       machineId,
       storeName,
       email: cleanEmail,
@@ -210,8 +242,104 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       trialLimit: FREE_TRIAL_LIMIT,
       trialUsed,
       trialRemaining: 0,
+      trial: {
+        enabled: true,
+        quota: FREE_TRIAL_LIMIT,
+        used: FREE_TRIAL_LIMIT,
+        remaining: 0,
+        is_trial: true
+      },
       billing: null
     };
+  }
+}
+
+/**
+ * Mengonsumsi 1 kuota trial di server VOC ML saat pengguna membuat pesan rahasia.
+ * Endpoint: POST /api/v1/trial/consume
+ */
+export async function consumeTrialQuota({ email, machineId }) {
+  const mId = machineId || emailToMachineId(email);
+  try {
+    const res = await fetch(`${VOCML_SERVER_URL}/api/v1/trial/consume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        machine_id: mId,
+        product: VOCML_PRODUCT
+      }),
+      signal: AbortSignal.timeout(6000)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 403 || data.allowed === false) {
+      invalidateUserLicenseCache(email);
+      return { ok: false, exhausted: true, message: data.message || data.error || 'Kuota Trial telah habis.' };
+    }
+    if (!res.ok) {
+      return { ok: false, error: data.error || `HTTP ${res.status}` };
+    }
+    invalidateUserLicenseCache(email);
+    return { ok: true, trial: data.trial, message: data.message };
+  } catch (err) {
+    console.warn('[Trial Consume] Gagal menghubungi VOC ML:', err.message);
+    return { ok: true, offline: true };
+  }
+}
+
+/**
+ * Klaim voucher promo di server VOC ML.
+ * Endpoint: POST /api/v1/voucher/claim
+ */
+export async function claimVoucher({ email, machineId, code }) {
+  const cleanCode = String(code || '').trim().toUpperCase();
+  if (!cleanCode) {
+    return { ok: false, error: 'Masukkan kode voucher terlebih dahulu.' };
+  }
+  const mId = machineId || emailToMachineId(email);
+  try {
+    const res = await fetch(`${VOCML_SERVER_URL}/api/v1/voucher/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        machine_id: mId,
+        product: VOCML_PRODUCT,
+        code: cleanCode
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: data.error || data.message || `Kode voucher tidak valid (HTTP ${res.status}).` };
+    }
+    invalidateUserLicenseCache(email);
+    return {
+      ok: true,
+      message: data.message || 'Kode voucher berhasil digunakan!',
+      type: data.type || (data.free_days ? 'free_days' : data.trial_quota ? 'trial_quota' : 'discount_nominal'),
+      data
+    };
+  } catch (err) {
+    console.error('[Voucher Claim] Error:', err.message);
+    return { ok: false, error: 'Gagal menghubungi server lisensi untuk klaim voucher.' };
+  }
+}
+
+/**
+ * Mengambil data tagihan & paket billing dinamis dari server VOC ML.
+ * Endpoint: GET /api/v1/billing
+ */
+export async function getVocmlBilling({ email, machineId }) {
+  const mId = machineId || emailToMachineId(email);
+  try {
+    const res = await fetch(`${VOCML_SERVER_URL}/api/v1/billing?machine_id=${encodeURIComponent(mId)}&product=${encodeURIComponent(VOCML_PRODUCT)}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    return data;
+  } catch {
+    return null;
   }
 }
 
