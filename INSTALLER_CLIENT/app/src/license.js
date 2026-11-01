@@ -181,7 +181,8 @@ export async function verifyUserAccountLicense({ email, name, messagesCreated = 
       trialLimit: serverTrialQuota,
       trialUsed: serverTrialUsed,
       trialRemaining: serverTrialRemaining,
-      trial: vocmlTrial || {
+      trial: {
+        ...(vocmlTrial || {}),
         enabled: true,
         quota: serverTrialQuota,
         used: serverTrialUsed,

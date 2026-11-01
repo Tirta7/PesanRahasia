@@ -659,7 +659,10 @@ const server = http.createServer(async (req, res) => {
       });
       return sendJson(res, 200, {
         authenticated: true,
-        user,
+        user: {
+          ...user,
+          trialLimit: license.trialLimit || 3
+        },
         license,
         status: license.status,
         allowed: license.allowed,

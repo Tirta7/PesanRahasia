@@ -684,7 +684,10 @@ export async function getAdminDashboardData() {
         pendingMessages: 0,
         expiredMessages: 0
       },
-      users: usersRes.rows,
+      users: (usersRes.rows || []).map((u) => ({
+        ...u,
+        trialLimit: Number(process.env.FREE_TRIAL_LIMIT) || 3
+      })),
       logs: logsRes.rows
     };
   }
@@ -703,7 +706,10 @@ export async function getAdminDashboardData() {
       pendingMessages: logsArr.filter((l) => l.status === 'pending').length,
       expiredMessages: logsArr.filter((l) => l.status === 'expired').length
     },
-    users: usersArr,
+    users: usersArr.map((u) => ({
+      ...u,
+      trialLimit: Number(process.env.FREE_TRIAL_LIMIT) || 3
+    })),
     logs: logsArr
   };
 }

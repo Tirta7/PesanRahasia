@@ -421,14 +421,15 @@
 
   function renderAccountLicenseScreen(user, license) {
     if (licTitle && licSubtitle) {
+      const lim = license?.trialLimit || 3;
       if (license?.status === 'trial_exhausted') {
-        licTitle.textContent = 'Kuota Trial 10x Pesan Habis';
+        licTitle.textContent = `Kuota Trial ${lim}x Pesan Habis`;
         licSubtitle.innerHTML =
-          'Anda telah menggunakan seluruh <strong>10x kuota pesan rahasia gratis</strong>. Untuk terus membuat pesan tanpa batas, aktifkan lisensi akun Anda di bawah ini.';
+          `Anda telah menggunakan seluruh <strong>${lim}x kuota pesan rahasia gratis</strong>. Untuk terus membuat pesan tanpa batas, aktifkan lisensi akun Anda di bawah ini.`;
       } else if (license?.isTrial) {
         licTitle.textContent = 'Informasi Lisensi Akun Pro';
         licSubtitle.innerHTML =
-          `Anda masih memiliki <strong>${license.trialRemaining} dari ${license.trialLimit || 10} kuota pesan gratis</strong>. Anda juga dapat mengaktifkan Lisensi Pro lebih awal.`;
+          `Anda masih memiliki <strong>${license.trialRemaining} dari ${lim} kuota pesan gratis</strong>. Anda juga dapat mengaktifkan Lisensi Pro lebih awal.`;
       } else {
         licTitle.textContent = 'Aktivasi Lisensi Akun Diperlukan';
         licSubtitle.innerHTML =
@@ -1087,7 +1088,8 @@
     if (license && !license.allowed) {
       renderAccountLicenseScreen(user, license);
       if (isFreshLogin) {
-        showToast('🔒 Kuota Trial 10x pesan telah habis. Silakan aktifkan lisensi akun Anda.');
+        const lim = license?.trialLimit || 3;
+        showToast(`🔒 Kuota Trial ${lim}x pesan telah habis. Silakan aktifkan lisensi akun Anda.`);
       }
       return;
     }
@@ -1096,7 +1098,7 @@
     startMyMessagesPolling();
     if (isFreshLogin) {
       if (license && license.isTrial) {
-        showToast(`🎁 Selamat datang ${user.name}! Anda mendapat Trial Gratis (${license.trialRemaining}/${license.trialLimit || 10} pesan).`);
+        showToast(`🎁 Selamat datang ${user.name}! Anda mendapat Trial Gratis (${license.trialRemaining}/${license.trialLimit || 3} pesan).`);
       } else {
         showToast(`👋 Selamat datang kembali, ${user.name}!`);
       }
@@ -1485,7 +1487,8 @@
       generatedLinkInput.value = '';
       if (currentLicense && !currentLicense.allowed) {
         renderAccountLicenseScreen(currentUser, currentLicense);
-        showToast('🔒 Kuota Trial 10x pesan gratis Anda telah habis. Silakan aktifkan lisensi akun.');
+        const lim = currentLicense.trialLimit || 3;
+        showToast(`🔒 Kuota Trial ${lim}x pesan gratis Anda telah habis. Silakan aktifkan lisensi akun.`);
         return;
       }
       loadMyMessages();

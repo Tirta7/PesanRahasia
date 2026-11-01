@@ -867,7 +867,7 @@
         </svg>
       </div>
       <h1>Login Panel Admin</h1>
-      <p>Masukkan password Administrator untuk memantau pengguna Gmail, kuota Trial 10x, dan lisensi VOC ML.</p>
+      <p>Masukkan password Administrator untuk memantau pengguna Gmail, kuota Trial, dan lisensi VOC ML.</p>
       <form id="admin-login-form">
         <input type="password" id="admin-password" class="form-input" autocomplete="current-password" required />
         <button type="submit" class="btn btn-primary" style="width:100%; padding:13px;">
@@ -887,7 +887,7 @@
             <div>
               <div class="push-title">Notifikasi Pendaftar Baru (Web Push HP)</div>
               <div class="push-desc" id="push-banner-desc">
-                Handphone Anda berbunyi otomatis saat ada pendaftar baru atau kuota Trial 10x habis.
+                Handphone Anda berbunyi otomatis saat ada pendaftar baru atau kuota Trial habis.
               </div>
             </div>
           </div>
@@ -1070,7 +1070,7 @@
               style="margin-bottom:4px; font-size:0.84rem;"
             />
             <small style="color:var(--text-muted); font-size:0.75rem; display:block;">
-              Nomor tujuan saat pengguna menekan tombol "Kirim ID Lisensi ke WhatsApp Admin" ketika kuota Trial 10x mereka habis.
+              Nomor tujuan saat pengguna menekan tombol "Kirim ID Lisensi ke WhatsApp Admin" ketika kuota Trial mereka habis.
             </small>
           </div>
 
@@ -1442,9 +1442,10 @@
         const filtered = allUsers.filter((u) => {
           const st = u.licenseStatus || 'pending';
           const used = Number(u.messagesCreated) || 0;
+          const lim = u.trialLimit || 3;
           if (activeUserFilter === 'active' && st !== 'active' && st !== 'expiring') return false;
-          if (activeUserFilter === 'pending' && (st === 'active' || st === 'expiring' || st === 'expired' || st === 'locked' || used >= 10)) return false;
-          if (activeUserFilter === 'expired' && st !== 'expired' && st !== 'locked' && st !== 'trial_exhausted' && used < 10) return false;
+          if (activeUserFilter === 'pending' && (st === 'active' || st === 'expiring' || st === 'expired' || st === 'locked' || used >= lim)) return false;
+          if (activeUserFilter === 'expired' && st !== 'expired' && st !== 'locked' && st !== 'trial_exhausted' && used < lim) return false;
 
           if (!q) return true;
           return (
@@ -1518,7 +1519,7 @@
                     <button type="button" class="btn btn-outline btn-sm js-user-detail" data-email="${u.email}">
                       🔍 Detail
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm js-reset-trial" data-id="${u.id}" data-email="${u.email}" title="Reset kuota Trial 10x pesan gratis pengguna ini ke 0/10">
+                    <button type="button" class="btn btn-primary btn-sm js-reset-trial" data-id="${u.id}" data-email="${u.email}" title="Reset kuota Trial pesan gratis pengguna ini ke 0">
                       🎁 Reset Trial
                     </button>
                     <button type="button" class="btn btn-amber btn-sm js-sync-user" data-email="${u.email}">
@@ -1929,7 +1930,7 @@
         const resetTrialBtn = e.target.closest('.js-reset-trial');
         if (resetTrialBtn) {
           const email = resetTrialBtn.dataset.email;
-          if (!confirm(`Reset kuota Trial pengguna ${email} menjadi 10x pesan gratis baru (0/10 terpakai)?`)) return;
+          if (!confirm(`Reset kuota Trial pengguna ${email} menjadi pesan gratis baru (0 terpakai)?`)) return;
           const res = await fetch(`/api/admin/users/${resetTrialBtn.dataset.id}/reset-trial`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${getAdminToken()}` }
@@ -1937,7 +1938,7 @@
           if (res.ok) {
             const data = await res.json();
             updateDashboardState(data);
-            showToast(`🎁 Kuota Trial 10x untuk ${email} berhasil di-reset!`);
+            showToast(`🎁 Kuota Trial untuk ${email} berhasil di-reset!`);
           }
           return;
         }
