@@ -1716,6 +1716,142 @@ input[type="password"]:focus {
   margin-top: 3px;
 }
 
+/* Kotak Pesan Siaran VOC ML di dalam Layar Lisensi */
+.vocml-admin-msg-box {
+  margin: 14px 0 18px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: slideDownMsg 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vocml-admin-msg-box.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fef3c7;
+}
+
+.vocml-admin-msg-box.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(185, 28, 28, 0.12));
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  color: #fee2e2;
+}
+
+.vocml-admin-msg-box.info {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(29, 78, 216, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #dbeafe;
+}
+
+.vocml-admin-msg-box.success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #d1fae5;
+}
+
+.vocml-msg-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vocml-msg-body {
+  flex: 1;
+}
+
+.vocml-msg-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vocml-msg-text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  opacity: 0.95;
+}
+
+/* Floating Broadcast Toast di Sudut Layar */
+.vocml-broadcast-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  max-width: 380px;
+  width: calc(100vw - 48px);
+  z-index: 99999;
+  padding: 14px 18px;
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s ease;
+}
+
+.vocml-broadcast-toast.warning {
+  background: rgba(30, 25, 15, 0.94);
+  border-left: 4px solid #f59e0b;
+  color: #fef3c7;
+}
+
+.vocml-broadcast-toast.danger {
+  background: rgba(35, 15, 15, 0.94);
+  border-left: 4px solid #ef4444;
+  color: #fee2e2;
+}
+
+.vocml-broadcast-toast.info {
+  background: rgba(15, 25, 38, 0.94);
+  border-left: 4px solid #3b82f6;
+  color: #dbeafe;
+}
+
+.vocml-broadcast-toast.success {
+  background: rgba(15, 35, 25, 0.94);
+  border-left: 4px solid #10b981;
+  color: #d1fae5;
+}
+
+.vocml-toast-close {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  margin-left: 6px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.vocml-toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideDownMsg {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
 /* Voucher Promo Box */
 .voucher-box {
   margin: 16px 0;

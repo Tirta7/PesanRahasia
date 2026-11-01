@@ -61,6 +61,7 @@ import {
   consumeTrialQuota,
   claimVoucher,
   getVocmlBilling,
+  getVocmlMessages,
   VOCML_PRODUCT,
   VOCML_SERVER_URL
 } from './src/license.js';
@@ -141,7 +142,8 @@ async function refreshLicenseForEmail(email) {
   }
 
   const license = await verifyUserAccountLicense({ ...user, bypassCache: true });
-  const sig = licenseSignature(license);
+  const messages = await getVocmlMessages({ email: user.email, machineId: license.machineId }).catch(() => []);
+  const sig = licenseSignature(license) + ':' + JSON.stringify(messages);
   if (sig !== lastLicenseSignature.get(email)) {
     lastLicenseSignature.set(email, sig);
     await updateUserLicenseInDb({
@@ -151,7 +153,7 @@ async function refreshLicenseForEmail(email) {
       expiresAt: license.expiresAt
     });
     for (const c of clients) {
-      sendSse(c.res, 'license', { user, license });
+      sendSse(c.res, 'license', { user, license, messages });
     }
   }
 }
@@ -633,11 +635,12 @@ const server = http.createServer(async (req, res) => {
         }
       });
 
-      // Kirim status lisensi terbaru langsung saat tersambung
+      // Kirim status lisensi terbaru & pesan broadcast langsung saat tersambung
       try {
         const initial = await verifyUserAccountLicense({ ...streamUser, bypassCache: true });
-        lastLicenseSignature.set(email, licenseSignature(initial));
-        sendSse(res, 'license', { user: streamUser, license: initial });
+        const initMsgs = await getVocmlMessages({ email: streamUser.email, machineId: initial.machineId }).catch(() => []);
+        lastLicenseSignature.set(email, licenseSignature(initial) + ':' + JSON.stringify(initMsgs));
+        sendSse(res, 'license', { user: streamUser, license: initial, messages: initMsgs });
       } catch {
         // Watcher akan mengirim pada siklus berikutnya
       }
@@ -664,6 +667,7 @@ const server = http.createServer(async (req, res) => {
         status: license.status,
         expiresAt: license.expiresAt
       });
+      const messages = await getVocmlMessages({ email: user.email, machineId: license.machineId }).catch(() => []);
       return sendJson(res, 200, {
         authenticated: true,
         user: {
@@ -673,10 +677,23 @@ const server = http.createServer(async (req, res) => {
         license,
         packages: license.billing?.packages || null,
         billing: license.billing || null,
+        messages,
         status: license.status,
         allowed: license.allowed,
         locked: !license.allowed ? 1 : 0
       });
+    }
+
+    // Endpoint Pesan Siaran / Broadcast Admin VOC ML
+    if (req.method === 'GET' && pathname === '/api/vocml-messages') {
+      const token = getBearerToken(req);
+      const user = await getUserBySessionToken(token);
+      if (!user) {
+        return sendJson(res, 401, { error: 'Silakan login terlebih dahulu.' });
+      }
+      const machineId = emailToMachineId(user.email);
+      const messages = await getVocmlMessages({ email: user.email, machineId });
+      return sendJson(res, 200, { ok: true, messages });
     }
 
     if (req.method === 'POST' && pathname === '/api/auth/google') {

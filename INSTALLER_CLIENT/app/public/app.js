@@ -40,6 +40,8 @@
   const licDefaultPolling = document.getElementById('lic-default-polling');
   const planList = document.getElementById('plan-list');
   const planExpiryInfo = document.getElementById('plan-expiry-info');
+  const vocmlAdminMsgBox = document.getElementById('vocml-admin-msg-box');
+  const vocmlBroadcastToast = document.getElementById('vocml-broadcast-toast');
   const voucherCodeInput = document.getElementById('voucher-code-input');
   const btnClaimVoucher = document.getElementById('btn-claim-voucher');
   const voucherFeedback = document.getElementById('voucher-feedback');
@@ -525,7 +527,109 @@
     renderPlanPicker(user || currentUser, license || currentLicense);
   }
 
-    let isCheckingPayStatus = false;
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  const dismissedVocmlMsgMap = new Map();
+  let broadcastToastTimer = null;
+
+  function renderVocmlMessages(messages) {
+    if (!messages || !Array.isArray(messages)) return;
+
+    // 1. Render di dalam modal lisensi
+    if (vocmlAdminMsgBox) {
+      const activeMsgs = messages.filter((m) => m && m.message);
+      if (activeMsgs.length > 0) {
+        vocmlAdminMsgBox.innerHTML = activeMsgs
+          .map((m) => {
+            const type = m.type || 'warning';
+            const icon = type === 'danger' ? '🚨' : type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '⚠️';
+            return `
+              <div class="vocml-admin-msg-box ${type}">
+                <span class="vocml-msg-icon">${icon}</span>
+                <div class="vocml-msg-body">
+                  <div class="vocml-msg-title">
+                    <span>${escapeHtml(m.title || 'Peringatan Admin')}</span>
+                  </div>
+                  <div class="vocml-msg-text">${escapeHtml(m.message)}</div>
+                </div>
+              </div>`;
+          })
+          .join('');
+        vocmlAdminMsgBox.classList.remove('hidden');
+      } else {
+        vocmlAdminMsgBox.classList.add('hidden');
+      }
+    }
+
+    // 2. Render floating toast di pojok atas layar
+    if (vocmlBroadcastToast && messages.length > 0) {
+      const now = Date.now();
+      const eligible = messages.find((m) => {
+        const lastDismiss = dismissedVocmlMsgMap.get(m.id) || 0;
+        const intervalMs = (m.interval_minutes || 5) * 60 * 1000;
+        return now - lastDismiss > intervalMs;
+      });
+
+      if (eligible) {
+        const type = eligible.type || 'warning';
+        const icon = type === 'danger' ? '🚨' : type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '⚠️';
+        vocmlBroadcastToast.className = `vocml-broadcast-toast ${type}`;
+        vocmlBroadcastToast.innerHTML = `
+          <span class="vocml-msg-icon">${icon}</span>
+          <div class="vocml-msg-body">
+            <div class="vocml-msg-title">
+              <span>${escapeHtml(eligible.title || 'Pesan dari Admin')}</span>
+              <button type="button" class="vocml-toast-close" title="Tutup">✕</button>
+            </div>
+            <div class="vocml-msg-text">${escapeHtml(eligible.message)}</div>
+          </div>`;
+        vocmlBroadcastToast.classList.remove('hidden');
+
+        const closeBtn = vocmlBroadcastToast.querySelector('.vocml-toast-close');
+        if (closeBtn) {
+          closeBtn.onclick = () => {
+            dismissedVocmlMsgMap.set(eligible.id, Date.now());
+            vocmlBroadcastToast.classList.add('hidden');
+          };
+        }
+
+        clearTimeout(broadcastToastTimer);
+        const dispSec = Math.max(5, Number(eligible.display_seconds) || 15);
+        broadcastToastTimer = setTimeout(() => {
+          vocmlBroadcastToast.classList.add('hidden');
+          dismissedVocmlMsgMap.set(eligible.id, Date.now());
+        }, dispSec * 1000);
+      }
+    }
+  }
+
+  async function loadVocmlBroadcastMessages() {
+    const token = getSessionToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/vocml-messages', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.messages) {
+        renderVocmlMessages(data.messages);
+      }
+    } catch {
+      // Abaikan
+    }
+  }
+
+  let isCheckingPayStatus = false;
     async function cekStatusBayar(isManualClick = false) {
       if (isCheckingPayStatus) return;
       isCheckingPayStatus = true;
@@ -557,6 +661,10 @@
         const pkgs = data.packages || data.license?.billing?.packages || null;
         if (pkgs && Array.isArray(pkgs) && pkgs.length > 0) {
           updatePlansIfChanged(pkgs, data.user, data.license);
+        }
+
+        if (data.messages && Array.isArray(data.messages)) {
+          renderVocmlMessages(data.messages);
         }
 
         // Jika lisensi sudah aktif / di-generate di VOC ML
@@ -710,6 +818,7 @@
       if (!res.ok) return;
       const { logs } = await res.json();
       renderMyMessages(logs || []);
+      loadVocmlBroadcastMessages();
     } catch {
       // Abaikan
     }
@@ -1170,7 +1279,7 @@
     licenseEventSource.addEventListener('license', (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        handleLiveLicenseUpdate(data.user, data.license);
+        handleLiveLicenseUpdate(data.user, data.license, data.messages);
       } catch {
         // Abaikan payload rusak
       }
@@ -1181,7 +1290,7 @@
     });
   }
 
-  function handleLiveLicenseUpdate(user, license) {
+  function handleLiveLicenseUpdate(user, license, messages) {
     if (!user || !license) return;
     const prev = currentLicense;
     updateUserHeader(user, license);
@@ -1189,6 +1298,10 @@
     const pkgs = license.billing?.packages || null;
     if (pkgs && Array.isArray(pkgs) && pkgs.length > 0) {
       updatePlansIfChanged(pkgs, user, license);
+    }
+
+    if (messages && Array.isArray(messages)) {
+      renderVocmlMessages(messages);
     }
 
     const shareVisible = shareView && !shareView.classList.contains('hidden');

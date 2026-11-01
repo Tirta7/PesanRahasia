@@ -345,6 +345,25 @@ export async function getVocmlBilling({ email, machineId }) {
   }
 }
 
+/**
+ * Mengambil pesan siaran / notifikasi admin VOC ML untuk client ini
+ * Endpoint: GET /api/v1/messages?machine_id={mId}&product={product}
+ */
+export async function getVocmlMessages({ email, machineId }) {
+  const mId = machineId || emailToMachineId(email);
+  try {
+    const res = await fetch(`${VOCML_SERVER_URL}/api/v1/messages?machine_id=${encodeURIComponent(mId)}&product=${encodeURIComponent(VOCML_PRODUCT)}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.messages) ? data.messages : [];
+  } catch {
+    return [];
+  }
+}
+
 export function invalidateUserLicenseCache(email) {
   if (!email) {
     userLicenseCache.clear();
